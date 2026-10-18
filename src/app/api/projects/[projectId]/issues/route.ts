@@ -1,12 +1,12 @@
-import { formatZodError } from "@/lib/utils";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
-import { IssuePriority, Prisma } from "@prisma/client";
+import { requireProjectMember } from "@/lib/auth";
+import { IssuePriority, Prisma, WorkspaceRole } from "@prisma/client";
 import { z } from "zod";
+import { formatZodError } from "@/lib/utils";
 
 const createIssueSchema = z.object({
-  title: z.string().min(1, "Title is required"),
+  title: z.string().min(1, "Title is required").max(300),
   description: z.string().optional(),
   stateId: z.string(),
   priority: z.nativeEnum(IssuePriority).default(IssuePriority.NONE),
@@ -25,8 +25,10 @@ export async function GET(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   try {
-    await requireAuth();
     const { projectId } = await params;
+    // Enforce project membership authorization
+    await requireProjectMember(projectId);
+
     const { searchParams } = new URL(req.url);
 
     const stateId = searchParams.get("stateId");
@@ -74,7 +76,6 @@ export async function GET(
 
     if (search && search.trim().length > 0) {
       const cleanSearch = search.trim();
-      // Check if user searched for "SPC-12" or "12"
       const numberMatch = cleanSearch.match(/\d+/);
       const searchNum = numberMatch ? parseInt(numberMatch[0], 10) : null;
 
@@ -118,8 +119,14 @@ export async function GET(
     });
 
     return NextResponse.json({ issues });
-  } catch (err) {
-    console.error("Fetch issues error:", err);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Error";
+    if (msg === "UNAUTHORIZED") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (msg === "FORBIDDEN_PROJECT_ACCESS" || msg === "INSUFFICIENT_PERMISSIONS") {
+      return NextResponse.json({ error: "Forbidden: No access to this project" }, { status: 403 });
+    }
     return NextResponse.json({ error: "Failed to fetch issues" }, { status: 500 });
   }
 }
@@ -129,21 +136,30 @@ export async function POST(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   try {
-    const user = await requireAuth();
     const { projectId } = await params;
+    // Enforce role: Members, Admins, and Owners can create issues (Guests blocked)
+    const { user, project } = await requireProjectMember(projectId, [
+      WorkspaceRole.MEMBER,
+      WorkspaceRole.ADMIN,
+      WorkspaceRole.OWNER,
+    ]);
+
     const body = await req.json();
     const data = createIssueSchema.parse(body);
 
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
+    // Verify state belongs to this project
+    const targetState = await prisma.state.findFirst({
+      where: { id: data.stateId, projectId },
     });
-
-    if (!project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    if (!targetState) {
+      return NextResponse.json({ error: "Invalid state for this project" }, { status: 400 });
     }
 
     // Atomic transaction for sequenceId generation and relations
     const issue = await prisma.$transaction(async (tx) => {
+      // Exclusively lock the parent Project row to serialize sequenceId generation under concurrency
+      await tx.$executeRaw`SELECT id FROM "Project" WHERE id = ${projectId} FOR UPDATE`;
+
       const maxIssue = await tx.issue.findFirst({
         where: { projectId },
         orderBy: { sequenceId: "desc" },
@@ -223,7 +239,13 @@ export async function POST(
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: formatZodError(err) }, { status: 400 });
     }
-    console.error("Create issue error:", err);
+    const msg = err instanceof Error ? err.message : "Error";
+    if (msg === "UNAUTHORIZED") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (msg === "FORBIDDEN_PROJECT_ACCESS" || msg === "INSUFFICIENT_PERMISSIONS") {
+      return NextResponse.json({ error: "Forbidden: No permission to create issues in this project" }, { status: 403 });
+    }
     return NextResponse.json({ error: "Failed to create issue" }, { status: 500 });
   }
 }

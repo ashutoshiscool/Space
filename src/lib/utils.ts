@@ -1,6 +1,7 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { IssuePriority, StateGroup } from "@prisma/client";
+import { ZodError } from "zod";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -17,12 +18,13 @@ export function formatDate(date: string | Date | null | undefined): string {
 }
 
 export function formatZodError(err: unknown): string {
-  if (!err) return "Validation error";
-  const issues = (err as any).issues;
-  if (Array.isArray(issues) && issues.length > 0) {
-    return issues[0]?.message || "Validation error";
+  if (err instanceof ZodError) {
+    return err.issues[0]?.message || "Validation error";
   }
-  return (err as any).message || "Validation error";
+  if (err instanceof Error) {
+    return err.message;
+  }
+  return "Validation error";
 }
 
 export function getPriorityMeta(priority: IssuePriority) {

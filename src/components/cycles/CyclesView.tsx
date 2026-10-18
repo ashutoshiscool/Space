@@ -6,7 +6,7 @@ import { CycleBurndownChart } from "./CycleBurndownChart";
 import { CycleCompleteModal } from "./CycleCompleteModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, RotateCcw, CheckCircle2, Calendar, Target } from "lucide-react";
+import { Plus, RotateCcw, CheckCircle2, Calendar } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -20,10 +20,10 @@ export function CyclesView({ cycles, project }: CyclesViewProps) {
     useState<CycleWithMetrics | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newCycleName, setNewCycleName] = useState("");
-  const [startDate, setStartDate] = useState(
+  const [startDate, setStartDate] = useState(() =>
     new Date().toISOString().split("T")[0]
   );
-  const [endDate, setEndDate] = useState(
+  const [endDate, setEndDate] = useState(() =>
     new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
   );
   const queryClient = useQueryClient();

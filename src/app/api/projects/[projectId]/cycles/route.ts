@@ -1,12 +1,12 @@
-import { formatZodError } from "@/lib/utils";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
-import { StateGroup } from "@prisma/client";
+import { requireProjectMember } from "@/lib/auth";
+import { StateGroup, WorkspaceRole } from "@prisma/client";
 import { z } from "zod";
+import { formatZodError } from "@/lib/utils";
 
 const createCycleSchema = z.object({
-  name: z.string().min(1, "Cycle name is required"),
+  name: z.string().min(1, "Cycle name is required").max(100),
   description: z.string().optional(),
   startDate: z.string(),
   endDate: z.string(),
@@ -17,8 +17,9 @@ export async function GET(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   try {
-    await requireAuth();
     const { projectId } = await params;
+    // Enforce project membership authorization
+    await requireProjectMember(projectId);
 
     const cycles = await prisma.cycle.findMany({
       where: { projectId },
@@ -46,7 +47,6 @@ export async function GET(
       const progressPercent =
         totalIssues > 0 ? Math.round((completedIssues / totalIssues) * 100) : 0;
 
-      // Burndown projection data between startDate and endDate
       const start = new Date(cycle.startDate);
       const end = new Date(cycle.endDate);
       const durationDays = Math.max(
@@ -63,7 +63,6 @@ export async function GET(
         const dayRatio = day / durationDays;
         const idealRemaining = Math.max(0, Math.round(totalInitialScope * (1 - dayRatio)));
 
-        // Actual remaining estimate for past/current days
         const isPastOrToday = currentDate <= new Date();
         const actualRemaining = isPastOrToday
           ? Math.max(0, Math.round(totalInitialScope - ((totalInitialScope - remainingScope) * Math.min(1, dayRatio * 1.2))))
@@ -88,8 +87,14 @@ export async function GET(
     });
 
     return NextResponse.json({ cycles: cyclesWithMetrics });
-  } catch (err) {
-    console.error("Fetch cycles error:", err);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Error";
+    if (msg === "UNAUTHORIZED") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (msg === "FORBIDDEN_PROJECT_ACCESS" || msg === "INSUFFICIENT_PERMISSIONS") {
+      return NextResponse.json({ error: "Forbidden: No access to this project" }, { status: 403 });
+    }
     return NextResponse.json({ error: "Failed to fetch cycles" }, { status: 500 });
   }
 }
@@ -99,8 +104,14 @@ export async function POST(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   try {
-    await requireAuth();
     const { projectId } = await params;
+    // Members, Admins, and Owners can create cycles (Guests blocked)
+    await requireProjectMember(projectId, [
+      WorkspaceRole.MEMBER,
+      WorkspaceRole.ADMIN,
+      WorkspaceRole.OWNER,
+    ]);
+
     const body = await req.json();
     const data = createCycleSchema.parse(body);
 
@@ -119,6 +130,13 @@ export async function POST(
   } catch (err: unknown) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: formatZodError(err) }, { status: 400 });
+    }
+    const msg = err instanceof Error ? err.message : "Error";
+    if (msg === "UNAUTHORIZED") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (msg === "FORBIDDEN_PROJECT_ACCESS" || msg === "INSUFFICIENT_PERMISSIONS") {
+      return NextResponse.json({ error: "Forbidden: No permission to create cycles" }, { status: 403 });
     }
     return NextResponse.json({ error: "Failed to create cycle" }, { status: 500 });
   }

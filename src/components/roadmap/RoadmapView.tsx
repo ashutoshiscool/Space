@@ -2,14 +2,15 @@
 
 import React, { useState } from "react";
 import { IssueWithDetails, ProjectWithDetails, ModuleWithMetrics } from "@/lib/types";
+import { Module } from "@prisma/client";
 import { useSpaceStore } from "@/lib/store";
-import { formatDate, getPriorityMeta, cn } from "@/lib/utils";
-import { Calendar, ChevronLeft, ChevronRight, Layers } from "lucide-react";
+import { formatDate, cn } from "@/lib/utils";
+import { Calendar, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface RoadmapViewProps {
   issues: IssueWithDetails[];
-  modules: ModuleWithMetrics[];
+  modules: (Module | ModuleWithMetrics)[];
   project: ProjectWithDetails;
 }
 
@@ -117,8 +118,6 @@ export function RoadmapView({ issues, modules, project }: RoadmapViewProps) {
                   Math.max(4, (durationDays / totalDays) * 100)
                 );
 
-                const pMeta = getPriorityMeta(issue.priority);
-
                 return (
                   <div
                     key={issue.id}
@@ -196,9 +195,11 @@ export function RoadmapView({ issues, modules, project }: RoadmapViewProps) {
                         }}
                       >
                         <span className="truncate">{mod.name}</span>
-                        <span className="text-[10px] opacity-80">
-                          {mod.progressPercent}%
-                        </span>
+                        {"progressPercent" in mod && (
+                          <span className="text-[10px] opacity-80">
+                            {(mod as ModuleWithMetrics).progressPercent}%
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>

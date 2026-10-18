@@ -1,17 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { IssueWithDetails, ProjectWithDetails } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Inbox,
   CheckCircle2,
   Clock,
   XCircle,
-  AlertTriangle,
-  ArrowRight,
-  Filter,
 } from "lucide-react";
 import { formatDate, getPriorityMeta, cn } from "@/lib/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -44,7 +40,7 @@ export function TriageView({ triageIssues, project }: TriageViewProps) {
       issueId: string;
       action: "accept" | "decline" | "snooze";
     }) => {
-      let data: Record<string, any> = {};
+      let data: Record<string, unknown> = {};
       if (action === "accept") {
         data = { stateId: todoState.id };
       } else if (action === "decline") {

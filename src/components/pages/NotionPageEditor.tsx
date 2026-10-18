@@ -1,19 +1,20 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Page, User } from "@prisma/client";
+import React, { useState } from "react";
+import { Page } from "@prisma/client";
 import { TipTapEditor } from "@/components/editor/TipTapEditor";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Globe, Lock, Share2, Check, ArrowLeft, Trash2 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 
+export interface PageWithDetails extends Page {
+  user: { id: string; name: string | null; avatarUrl: string | null };
+  project: { id: string; name: string; identifier: string; workspace: { slug: string } };
+}
+
 interface NotionPageEditorProps {
-  page: Page & {
-    user: Pick<User, "id" | "name" | "avatarUrl">;
-    project: { id: string; name: string; identifier: string; workspace: { slug: string } };
-  };
+  page: PageWithDetails;
   isReadOnly?: boolean;
 }
 

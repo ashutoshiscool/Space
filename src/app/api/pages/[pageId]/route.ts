@@ -1,7 +1,7 @@
 import { formatZodError } from "@/lib/utils";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser, requireAuth } from "@/lib/auth";
+import { requirePageAccess } from "@/lib/auth";
 import { z } from "zod";
 
 const updatePageSchema = z.object({
@@ -17,8 +17,14 @@ export async function GET(
 ) {
   try {
     const { pageId } = await params;
-    const page = await prisma.page.findUnique({
-      where: { id: pageId },
+    const { page } = await requirePageAccess(
+      pageId,
+      ["OWNER", "ADMIN", "MEMBER", "GUEST"],
+      true // allowPublicRead
+    );
+
+    const fullPage = await prisma.page.findUnique({
+      where: { id: page.id },
       include: {
         user: { select: { id: true, name: true, avatarUrl: true } },
         project: {
@@ -32,19 +38,18 @@ export async function GET(
       },
     });
 
-    if (!page) {
+    return NextResponse.json({ page: fullPage });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "";
+    if (message === "PAGE_NOT_FOUND") {
       return NextResponse.json({ error: "Page not found" }, { status: 404 });
     }
-
-    if (!page.isPublic) {
-      const user = await getCurrentUser();
-      if (!user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
+    if (message === "UNAUTHORIZED") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    return NextResponse.json({ page });
-  } catch {
+    if (message === "FORBIDDEN_PAGE_ACCESS" || message === "INSUFFICIENT_PERMISSIONS") {
+      return NextResponse.json({ error: "Forbidden: access denied" }, { status: 403 });
+    }
     return NextResponse.json({ error: "Failed to fetch page" }, { status: 500 });
   }
 }
@@ -54,8 +59,8 @@ export async function PATCH(
   { params }: { params: Promise<{ pageId: string }> }
 ) {
   try {
-    await requireAuth();
     const { pageId } = await params;
+    await requirePageAccess(pageId, ["OWNER", "ADMIN", "MEMBER"]);
     const body = await req.json();
     const data = updatePageSchema.parse(body);
 
@@ -72,6 +77,16 @@ export async function PATCH(
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: formatZodError(err) }, { status: 400 });
     }
+    const message = err instanceof Error ? err.message : "";
+    if (message === "PAGE_NOT_FOUND") {
+      return NextResponse.json({ error: "Page not found" }, { status: 404 });
+    }
+    if (message === "UNAUTHORIZED") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (message === "FORBIDDEN_PAGE_ACCESS" || message === "INSUFFICIENT_PERMISSIONS") {
+      return NextResponse.json({ error: "Forbidden: insufficient permissions" }, { status: 403 });
+    }
     return NextResponse.json({ error: "Failed to update page" }, { status: 500 });
   }
 }
@@ -81,15 +96,25 @@ export async function DELETE(
   { params }: { params: Promise<{ pageId: string }> }
 ) {
   try {
-    await requireAuth();
     const { pageId } = await params;
+    await requirePageAccess(pageId, ["OWNER", "ADMIN", "MEMBER"]);
 
     await prisma.page.delete({
       where: { id: pageId },
     });
 
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "";
+    if (message === "PAGE_NOT_FOUND") {
+      return NextResponse.json({ error: "Page not found" }, { status: 404 });
+    }
+    if (message === "UNAUTHORIZED") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (message === "FORBIDDEN_PAGE_ACCESS" || message === "INSUFFICIENT_PERMISSIONS") {
+      return NextResponse.json({ error: "Forbidden: insufficient permissions" }, { status: 403 });
+    }
     return NextResponse.json({ error: "Failed to delete page" }, { status: 500 });
   }
 }

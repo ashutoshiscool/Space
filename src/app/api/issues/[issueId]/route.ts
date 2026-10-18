@@ -1,9 +1,9 @@
-import { formatZodError } from "@/lib/utils";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
-import { IssuePriority } from "@prisma/client";
+import { requireIssueAccess } from "@/lib/auth";
+import { IssuePriority, WorkspaceRole, Prisma } from "@prisma/client";
 import { z } from "zod";
+import { formatZodError } from "@/lib/utils";
 
 const updateIssueSchema = z.object({
   title: z.string().min(1).optional(),
@@ -26,8 +26,9 @@ export async function GET(
   { params }: { params: Promise<{ issueId: string }> }
 ) {
   try {
-    await requireAuth();
     const { issueId } = await params;
+    // Enforce tenant authorization
+    await requireIssueAccess(issueId);
 
     const issue = await prisma.issue.findUnique({
       where: { id: issueId },
@@ -124,8 +125,17 @@ export async function GET(
     }
 
     return NextResponse.json({ issue });
-  } catch (err) {
-    console.error("Fetch issue error:", err);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Error";
+    if (msg === "UNAUTHORIZED") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (msg === "FORBIDDEN_ISSUE_ACCESS" || msg === "INSUFFICIENT_PERMISSIONS") {
+      return NextResponse.json({ error: "Forbidden: No access to this issue" }, { status: 403 });
+    }
+    if (msg === "ISSUE_NOT_FOUND") {
+      return NextResponse.json({ error: "Issue not found" }, { status: 404 });
+    }
     return NextResponse.json({ error: "Failed to fetch issue" }, { status: 500 });
   }
 }
@@ -135,27 +145,30 @@ export async function PATCH(
   { params }: { params: Promise<{ issueId: string }> }
 ) {
   try {
-    const user = await requireAuth();
     const { issueId } = await params;
+    // Enforce tenant authorization and role (Guests cannot edit issues)
+    const { user, issue: current } = await requireIssueAccess(issueId, [
+      WorkspaceRole.MEMBER,
+      WorkspaceRole.ADMIN,
+      WorkspaceRole.OWNER,
+    ]);
+
     const body = await req.json();
     const data = updateIssueSchema.parse(body);
 
-    const current = await prisma.issue.findUnique({
+    const fullCurrent = await prisma.issue.findUnique({
       where: { id: issueId },
-      include: {
-        state: true,
-        assignees: true,
-      },
+      include: { state: true, assignees: true },
     });
 
-    if (!current) {
+    if (!fullCurrent) {
       return NextResponse.json({ error: "Issue not found" }, { status: 404 });
     }
 
     // Process updates and generate activity audit entries
     const updated = await prisma.$transaction(async (tx) => {
       // Check for state change
-      if (data.stateId && data.stateId !== current.stateId) {
+      if (data.stateId && data.stateId !== fullCurrent.stateId) {
         const newState = await tx.state.findUnique({ where: { id: data.stateId } });
         await tx.issueActivity.create({
           data: {
@@ -163,35 +176,35 @@ export async function PATCH(
             userId: user.id,
             action: "STATE_CHANGED",
             field: "state",
-            oldValue: current.state.name,
+            oldValue: fullCurrent.state.name,
             newValue: newState?.name ?? data.stateId,
           },
         });
       }
 
       // Check for priority change
-      if (data.priority && data.priority !== current.priority) {
+      if (data.priority && data.priority !== fullCurrent.priority) {
         await tx.issueActivity.create({
           data: {
             issueId,
             userId: user.id,
             action: "PRIORITY_CHANGED",
             field: "priority",
-            oldValue: current.priority,
+            oldValue: fullCurrent.priority,
             newValue: data.priority,
           },
         });
       }
 
       // Check for estimate change
-      if (data.estimate !== undefined && data.estimate !== current.estimate) {
+      if (data.estimate !== undefined && data.estimate !== fullCurrent.estimate) {
         await tx.issueActivity.create({
           data: {
             issueId,
             userId: user.id,
             action: "ESTIMATE_CHANGED",
             field: "estimate",
-            oldValue: current.estimate ? `${current.estimate} pts` : "none",
+            oldValue: fullCurrent.estimate ? `${fullCurrent.estimate} pts` : "none",
             newValue: data.estimate ? `${data.estimate} pts` : "none",
           },
         });
@@ -226,19 +239,22 @@ export async function PATCH(
         }
       }
 
-      const issueUpdateData: any = {};
+      const issueUpdateData: Prisma.IssueUpdateInput = {};
       if (data.title !== undefined) issueUpdateData.title = data.title;
       if (data.description !== undefined) issueUpdateData.description = data.description;
-      if (data.stateId !== undefined) issueUpdateData.stateId = data.stateId;
+      if (data.stateId !== undefined) issueUpdateData.state = { connect: { id: data.stateId } };
       if (data.priority !== undefined) issueUpdateData.priority = data.priority;
       if (data.estimate !== undefined) issueUpdateData.estimate = data.estimate;
       if (data.startDate !== undefined)
         issueUpdateData.startDate = data.startDate ? new Date(data.startDate) : null;
       if (data.dueDate !== undefined)
         issueUpdateData.dueDate = data.dueDate ? new Date(data.dueDate) : null;
-      if (data.cycleId !== undefined) issueUpdateData.cycleId = data.cycleId;
-      if (data.moduleId !== undefined) issueUpdateData.moduleId = data.moduleId;
-      if (data.parentId !== undefined) issueUpdateData.parentId = data.parentId;
+      if (data.cycleId !== undefined)
+        issueUpdateData.cycle = data.cycleId ? { connect: { id: data.cycleId } } : { disconnect: true };
+      if (data.moduleId !== undefined)
+        issueUpdateData.module = data.moduleId ? { connect: { id: data.moduleId } } : { disconnect: true };
+      if (data.parentId !== undefined)
+        issueUpdateData.parent = data.parentId ? { connect: { id: data.parentId } } : { disconnect: true };
       if (data.isArchived !== undefined) issueUpdateData.isArchived = data.isArchived;
 
       return tx.issue.update({
@@ -268,7 +284,16 @@ export async function PATCH(
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: formatZodError(err) }, { status: 400 });
     }
-    console.error("Update issue error:", err);
+    const msg = err instanceof Error ? err.message : "Error";
+    if (msg === "UNAUTHORIZED") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (msg === "FORBIDDEN_ISSUE_ACCESS" || msg === "INSUFFICIENT_PERMISSIONS") {
+      return NextResponse.json({ error: "Forbidden: No permission to update this issue" }, { status: 403 });
+    }
+    if (msg === "ISSUE_NOT_FOUND") {
+      return NextResponse.json({ error: "Issue not found" }, { status: 404 });
+    }
     return NextResponse.json({ error: "Failed to update issue" }, { status: 500 });
   }
 }
@@ -278,17 +303,28 @@ export async function DELETE(
   { params }: { params: Promise<{ issueId: string }> }
 ) {
   try {
-    await requireAuth();
     const { issueId } = await params;
+    // Enforce tenant authorization and role (Guests cannot archive/delete issues)
+    await requireIssueAccess(issueId, [
+      WorkspaceRole.MEMBER,
+      WorkspaceRole.ADMIN,
+      WorkspaceRole.OWNER,
+    ]);
 
-    // Soft delete by archiving
     const issue = await prisma.issue.update({
       where: { id: issueId },
       data: { isArchived: true },
     });
 
     return NextResponse.json({ success: true, issue });
-  } catch {
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Error";
+    if (msg === "UNAUTHORIZED") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (msg === "FORBIDDEN_ISSUE_ACCESS" || msg === "INSUFFICIENT_PERMISSIONS") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
     return NextResponse.json({ error: "Failed to archive issue" }, { status: 500 });
   }
 }

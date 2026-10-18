@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import TaskList from "@tiptap/extension-task-list";
@@ -28,6 +28,8 @@ interface TipTapEditorProps {
   className?: string;
 }
 
+const emptySubscribe = () => () => {};
+
 export function TipTapEditor({
   content = "",
   onChange,
@@ -35,11 +37,11 @@ export function TipTapEditor({
   editable = true,
   className,
 }: TipTapEditorProps) {
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const isMounted = React.useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
 
   const editor = useEditor({
     extensions: [

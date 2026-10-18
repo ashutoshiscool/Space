@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -31,14 +31,16 @@ export function KanbanBoard({
   initialIssues,
   projectIdentifier,
 }: KanbanBoardProps) {
+  const [prevInitialIssues, setPrevInitialIssues] = useState<IssueWithDetails[]>(initialIssues);
   const [issues, setIssues] = useState<IssueWithDetails[]>(initialIssues);
   const [activeIssue, setActiveIssue] = useState<IssueWithDetails | null>(null);
   const queryClient = useQueryClient();
 
-  // Sync when initialIssues changes from external query
-  useEffect(() => {
+  // Sync state during render when initialIssues reference changes
+  if (initialIssues !== prevInitialIssues) {
+    setPrevInitialIssues(initialIssues);
     setIssues(initialIssues);
-  }, [initialIssues]);
+  }
 
   // Configure sensors with 5px distance constraint for fluid distinction between click & drag
   const sensors = useSensors(
@@ -69,7 +71,7 @@ export function KanbanBoard({
       if (!res.ok) throw new Error("Failed to update issue state");
       return res.json();
     },
-    onError: (err, variables, context) => {
+    onError: (err) => {
       console.error("Optimistic rollback:", err);
       // Rollback to server state
       queryClient.invalidateQueries({ queryKey: ["issues"] });

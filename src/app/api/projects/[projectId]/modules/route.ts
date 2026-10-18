@@ -1,7 +1,7 @@
 import { formatZodError } from "@/lib/utils";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requireProjectMember } from "@/lib/auth";
 import { StateGroup } from "@prisma/client";
 import { z } from "zod";
 
@@ -19,8 +19,8 @@ export async function GET(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   try {
-    await requireAuth();
     const { projectId } = await params;
+    await requireProjectMember(projectId, ["OWNER", "ADMIN", "MEMBER", "GUEST"]);
 
     const modules = await prisma.module.findMany({
       where: { projectId },
@@ -59,6 +59,16 @@ export async function GET(
 
     return NextResponse.json({ modules: modulesWithStats });
   } catch (err) {
+    const message = err instanceof Error ? err.message : "";
+    if (message === "UNAUTHORIZED") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (message === "PROJECT_NOT_FOUND") {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+    if (message === "FORBIDDEN_PROJECT_ACCESS" || message === "INSUFFICIENT_PERMISSIONS") {
+      return NextResponse.json({ error: "Forbidden: access denied" }, { status: 403 });
+    }
     console.error("Fetch modules error:", err);
     return NextResponse.json({ error: "Failed to fetch modules" }, { status: 500 });
   }
@@ -69,8 +79,8 @@ export async function POST(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   try {
-    await requireAuth();
     const { projectId } = await params;
+    await requireProjectMember(projectId, ["OWNER", "ADMIN", "MEMBER"]);
     const body = await req.json();
     const data = createModuleSchema.parse(body);
 
@@ -90,6 +100,16 @@ export async function POST(
   } catch (err: unknown) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: formatZodError(err) }, { status: 400 });
+    }
+    const message = err instanceof Error ? err.message : "";
+    if (message === "UNAUTHORIZED") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (message === "PROJECT_NOT_FOUND") {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+    if (message === "FORBIDDEN_PROJECT_ACCESS" || message === "INSUFFICIENT_PERMISSIONS") {
+      return NextResponse.json({ error: "Forbidden: insufficient permissions" }, { status: 403 });
     }
     return NextResponse.json({ error: "Failed to create module" }, { status: 500 });
   }

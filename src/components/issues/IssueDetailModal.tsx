@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSpaceStore } from "@/lib/store";
 import { IssueWithDetails, ProjectWithDetails } from "@/lib/types";
-import { IssuePriority, RelationType } from "@prisma/client";
+import { IssuePriority } from "@prisma/client";
 import { getPriorityMeta, formatDate, cn } from "@/lib/utils";
 import { TipTapEditor } from "@/components/editor/TipTapEditor";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -21,9 +21,7 @@ import {
   MessageSquare,
   Activity,
   GitBranch,
-  Link as LinkIcon,
   Archive,
-  Calendar,
   Send,
   Plus,
   Check,
@@ -55,7 +53,7 @@ export function IssueDetailModal() {
 
   // Mutation to update issue fields
   const updateIssueMutation = useMutation({
-    mutationFn: async (updatedData: Record<string, any>) => {
+    mutationFn: async (updatedData: Record<string, unknown>) => {
       if (!activeIssueId) return;
       const res = await fetch(`/api/issues/${activeIssueId}`, {
         method: "PATCH",

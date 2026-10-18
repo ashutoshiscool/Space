@@ -12,7 +12,7 @@ export default async function SingleDocPage({
     pageId: string;
   }>;
 }) {
-  const { workspaceSlug, projectIdentifier, pageId } = await params;
+  const { pageId } = await params;
 
   const page = await prisma.page.findUnique({
     where: { id: pageId },
@@ -33,7 +33,7 @@ export default async function SingleDocPage({
 
   return (
     <div className="flex-1 overflow-y-auto px-4 py-2">
-      <NotionPageEditor page={page as any} />
+      <NotionPageEditor page={page} />
     </div>
   );
 }

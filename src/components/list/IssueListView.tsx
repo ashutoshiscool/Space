@@ -12,7 +12,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { MessageSquare, GitBranch, Archive, Check } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -56,7 +55,7 @@ export function IssueListView({
       data,
     }: {
       issueId: string;
-      data: Record<string, any>;
+      data: Record<string, unknown>;
     }) => {
       const res = await fetch(`/api/issues/${issueId}`, {
         method: "PATCH",
@@ -73,7 +72,7 @@ export function IssueListView({
 
   // Batch update mutation
   const batchUpdateMutation = useMutation({
-    mutationFn: async ({ data }: { data: Record<string, any> }) => {
+    mutationFn: async ({ data }: { data: Record<string, unknown> }) => {
       await Promise.all(
         selectedIds.map((id) =>
           fetch(`/api/issues/${id}`, {

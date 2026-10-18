@@ -135,7 +135,7 @@ export function IssuesPageClient({
       {viewMode === "roadmap" && (
         <RoadmapView
           issues={filteredIssues}
-          modules={project.modules as any}
+          modules={project.modules}
           project={project}
         />
       )}
