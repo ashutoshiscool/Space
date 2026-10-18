@@ -1,0 +1,331 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  MEMBER
+  GUEST
+}
+
+enum IssuePriority {
+  URGENT
+  HIGH
+  MEDIUM
+  LOW
+  NONE
+}
+
+enum StateGroup {
+  BACKLOG
+  UNSTARTED
+  STARTED
+  COMPLETED
+  CANCELED
+}
+
+enum RelationType {
+  BLOCKS
+  BLOCKED_BY
+  RELATED
+  DUPLICATE
+}
+
+model User {
+  id             String            @id @default(uuid())
+  email          String            @unique
+  name           String
+  avatarUrl      String?
+  passwordHash   String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  
+  memberships    WorkspaceMember[]
+  projectMembers ProjectMember[]
+  assignedIssues IssueAssignee[]
+  createdIssues  Issue[]           @relation("IssueCreator")
+  comments       IssueComment[]
+  activities     IssueActivity[]
+  notifications  Notification[]
+  pages          Page[]
+}
+
+model Workspace {
+  id          String            @id @default(uuid())
+  name        String
+  slug        String            @unique
+  logoUrl     String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  
+  members     WorkspaceMember[]
+  projects    Project[]
+  invitations WorkspaceInvite[]
+}
+
+model WorkspaceMember {
+  id          String        @id @default(uuid())
+  workspaceId String
+  userId      String
+  role        WorkspaceRole @default(MEMBER)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([workspaceId, userId])
+}
+
+model WorkspaceInvite {
+  id          String        @id @default(uuid())
+  workspaceId String
+  email       String
+  role        WorkspaceRole @default(MEMBER)
+  token       String        @unique
+  expiresAt   DateTime
+  createdAt   DateTime      @default(now())
+  
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  @@unique([workspaceId, email])
+}
+
+model Project {
+  id          String          @id @default(uuid())
+  workspaceId String
+  name        String
+  identifier  String          // e.g. "SPC", "ENG"
+  description String?
+  icon        String?
+  isPublic    Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  
+  workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  members     ProjectMember[]
+  states      State[]
+  issues      Issue[]
+  cycles      Cycle[]
+  modules     Module[]
+  pages       Page[]
+  labels      Label[]
+  
+  @@unique([workspaceId, identifier])
+}
+
+model ProjectMember {
+  id        String        @id @default(uuid())
+  projectId String
+  userId    String
+  role      WorkspaceRole @default(MEMBER)
+  
+  project   Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([projectId, userId])
+}
+
+model State {
+  id          String     @id @default(uuid())
+  projectId   String
+  name        String
+  color       String     @default("#94a3b8")
+  group       StateGroup @default(UNSTARTED)
+  sequence    Int        @default(0)
+  createdAt   DateTime   @default(now())
+  
+  project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  issues      Issue[]
+}
+
+model Label {
+  id          String     @id @default(uuid())
+  projectId   String
+  name        String
+  color       String     @default("#64748b")
+  
+  project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  issues      IssueLabel[]
+  
+  @@unique([projectId, name])
+}
+
+model Issue {
+  id          String          @id @default(uuid())
+  projectId   String
+  sequenceId  Int             // Issue number (e.g. 101 -> "SPC-101")
+  title       String
+  description String?         @db.Text
+  priority    IssuePriority   @default(NONE)
+  stateId     String
+  estimate    Int?
+  startDate   DateTime?
+  dueDate     DateTime?
+  parentId    String?
+  cycleId     String?
+  moduleId    String?
+  createdById String
+  isArchived  Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  
+  project     Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  state       State           @relation(fields: [stateId], references: [id])
+  parent      Issue?          @relation("SubIssues", fields: [parentId], references: [id], onDelete: SetNull)
+  subIssues   Issue[]         @relation("SubIssues")
+  cycle       Cycle?          @relation(fields: [cycleId], references: [id], onDelete: SetNull)
+  module      Module?         @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  createdBy   User            @relation("IssueCreator", fields: [createdById], references: [id])
+  
+  assignees   IssueAssignee[]
+  labels      IssueLabel[]
+  comments    IssueComment[]
+  activities  IssueActivity[]
+  attachments IssueAttachment[]
+  relations   IssueRelation[] @relation("IssueSource")
+  relatedBy   IssueRelation[] @relation("IssueTarget")
+  
+  @@unique([projectId, sequenceId])
+  @@index([projectId, stateId])
+  @@index([projectId, cycleId])
+  @@index([projectId, moduleId])
+}
+
+model IssueAssignee {
+  id        String   @id @default(uuid())
+  issueId   String
+  userId    String
+  
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([issueId, userId])
+}
+
+model IssueLabel {
+  id        String   @id @default(uuid())
+  issueId   String
+  labelId   String
+  
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  label     Label    @relation(fields: [labelId], references: [id], onDelete: Cascade)
+  
+  @@unique([issueId, labelId])
+}
+
+model IssueRelation {
+  id        String       @id @default(uuid())
+  sourceId  String
+  targetId  String
+  type      RelationType @default(RELATED)
+  
+  source    Issue        @relation("IssueSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  target    Issue        @relation("IssueTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  
+  @@unique([sourceId, targetId, type])
+}
+
+model IssueComment {
+  id        String   @id @default(uuid())
+  issueId   String
+  userId    String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model IssueActivity {
+  id        String   @id @default(uuid())
+  issueId   String
+  userId    String
+  action    String   // "STATE_CHANGED", "ASSIGNED", "PRIORITY_CHANGED", "COMMENT_ADDED"
+  field     String?
+  oldValue  String?
+  newValue  String?
+  createdAt DateTime @default(now())
+  
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model IssueAttachment {
+  id        String   @id @default(uuid())
+  issueId   String
+  fileName  String
+  fileUrl   String
+  fileSize  Int
+  mimeType  String
+  createdAt DateTime @default(now())
+  
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+}
+
+model Cycle {
+  id          String    @id @default(uuid())
+  projectId   String
+  name        String
+  description String?
+  startDate   DateTime
+  endDate     DateTime
+  isCompleted Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  issues      Issue[]
+}
+
+model Module {
+  id          String    @id @default(uuid())
+  projectId   String
+  name        String
+  description String?
+  status      String    @default("PLANNED") // PLANNED, IN_PROGRESS, PAUSED, COMPLETED
+  leadId      String?
+  startDate   DateTime?
+  targetDate  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  issues      Issue[]
+}
+
+model Page {
+  id          String   @id @default(uuid())
+  projectId   String
+  userId      String
+  parentId    String?
+  title       String
+  content     String?  @db.Text
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent      Page?    @relation("SubPages", fields: [parentId], references: [id], onDelete: SetNull)
+  children    Page[]   @relation("SubPages")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
