@@ -133,7 +133,7 @@ export function SpaceViewsFlyout({
       case "archive":
         return (
           <div className="w-full h-36 rounded-md bg-[#deebff] border border-[#b3d4ff]/40 flex items-center justify-center p-3 relative overflow-hidden shadow-2xs">
-            {/* Mock Archive Work Item Card */}
+            {/* Archive Work Item Preview Illustration */}
             <div className="w-56 bg-white rounded-md shadow-xs border border-[#c1c7d0]/40 p-3 space-y-2">
               <div className="h-1.5 w-16 bg-[#c1c7d0] rounded-xs" />
               <div className="flex items-center justify-between">

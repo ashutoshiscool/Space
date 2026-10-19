@@ -95,30 +95,97 @@ export function AnalyticsView({ issues, project, cycles }: AnalyticsViewProps) {
   }, [issues, project.members]);
 
   // Cycle time data points
+  // Real Cycle time data points computed dynamically from real project issues
   const [hoveredPoint, setHoveredPoint] = React.useState<{
     date: string;
     cycleDays: number;
     color: string;
     label: string;
+    stateName: string;
   } | null>(null);
 
   const cycleTimePoints = useMemo(() => {
-    return [
-      { date: "2026-09-...", cycleDays: 1.2, topDays: 28, color: "#10b981", topColor: "#f59e0b", label: `${project.identifier}-1: Task cycle analysis` },
-      { date: "2026-09-21", cycleDays: 0, color: "#38bdf8", label: `${project.identifier}-2: Onboarding flow` },
-      { date: "2026-10-08", cycleDays: 0, color: "#f59e0b", label: `${project.identifier}-3: Component refactor` },
-      { date: "2026-10-09", cycleDays: 0, color: "#3b82f6", label: `${project.identifier}-4: API integration` },
-      { date: "2026-10-18", cycleDays: 0, color: "#94a3b8", label: `${project.identifier}-5: Performance pass` },
-      { date: "2026-10-19", cycleDays: 0, color: "#94a3b8", label: `${project.identifier}-6: Final release` },
-    ];
-  }, [project.identifier]);
+    if (!issues || issues.length === 0) return [];
 
-  // SVG Chart Dimensions
-  const yTicks = [25, 20, 15, 10, 5, 0];
+    // Sort issues by creation date ascending
+    const sorted = [...issues].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+
+    return sorted.map((issue) => {
+      const createdTime = new Date(issue.createdAt).getTime();
+      let cycleDays = 0;
+      let color = "#94a3b8";
+
+      if (issue.state.group === StateGroup.COMPLETED) {
+        const completedTime = new Date(issue.updatedAt).getTime();
+        const diffMs = Math.max(0, completedTime - createdTime);
+        cycleDays = Math.max(0.1, Number((diffMs / (1000 * 60 * 60 * 24)).toFixed(1)));
+        color = "#10b981"; // Resolved
+      } else if (issue.state.group === StateGroup.STARTED) {
+        const diffMs = Math.max(0, Date.now() - createdTime);
+        cycleDays = Math.max(0.1, Number((diffMs / (1000 * 60 * 60 * 24)).toFixed(1)));
+        color = "#f59e0b"; // In Progress
+      } else {
+        cycleDays = 0;
+        color = "#3b82f6"; // Low Cycle / Backlog
+      }
+
+      const dateStr = new Date(issue.createdAt).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
+
+      return {
+        id: issue.id,
+        date: dateStr,
+        cycleDays,
+        color,
+        label: `${project.identifier}-${issue.sequenceId}: ${issue.title}`,
+        stateName: issue.state.name,
+      };
+    });
+  }, [issues, project.identifier]);
+
+  // Dynamic Y Axis scale based on real data
+  const maxDays = useMemo(() => {
+    if (cycleTimePoints.length === 0) return 10;
+    const maxVal = Math.max(...cycleTimePoints.map((p) => p.cycleDays));
+    return Math.max(5, Math.ceil(maxVal / 5) * 5);
+  }, [cycleTimePoints]);
+
+  const yTicks = useMemo(() => {
+    const step = maxDays / 5;
+    return [
+      maxDays,
+      Math.round(step * 4),
+      Math.round(step * 3),
+      Math.round(step * 2),
+      Math.round(step * 1),
+      0,
+    ];
+  }, [maxDays]);
+
+  // SVG coordinates for real points
+  const pointsWithCoords = useMemo(() => {
+    const count = cycleTimePoints.length;
+    return cycleTimePoints.map((p, index) => {
+      const cx = count <= 1 ? 300 : 30 + (index / (count - 1)) * 540;
+      const cy = 150 - (p.cycleDays / maxDays) * 130;
+      return { ...p, cx, cy };
+    });
+  }, [cycleTimePoints, maxDays]);
+
+  const pathD = useMemo(() => {
+    if (pointsWithCoords.length <= 1) return "";
+    return pointsWithCoords
+      .map((p, i) => `${i === 0 ? "M" : "L"} ${p.cx.toFixed(1)} ${p.cy.toFixed(1)}`)
+      .join(" ");
+  }, [pointsWithCoords]);
 
   return (
     <div className="flex flex-col space-y-6 w-full max-w-6xl">
-      {/* Cycle Time & Lead Time Chart (Matching Flagship XRGO Stats View) */}
+      {/* Cycle Time & Lead Time Chart */}
       <div className="rounded-xl border border-[#e2e8f0] bg-white p-5 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
@@ -127,7 +194,7 @@ export function AnalyticsView({ issues, project, cycles }: AnalyticsViewProps) {
               <span>Cycle Time & Lead Time Report</span>
             </h3>
             <p className="text-xs text-[#6b7280] mt-0.5">
-              Average duration in days from work item creation to delivery in {project.identifier}
+              Real duration in days from work item creation to delivery in {project.identifier}
             </p>
           </div>
 
@@ -142,7 +209,7 @@ export function AnalyticsView({ issues, project, cycles }: AnalyticsViewProps) {
             </span>
             <span className="flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-[#3b82f6]" />
-              <span>Low Cycle</span>
+              <span>Backlog / Unstarted</span>
             </span>
           </div>
         </div>
@@ -150,157 +217,110 @@ export function AnalyticsView({ issues, project, cycles }: AnalyticsViewProps) {
         {/* SVG Cycle Time Chart */}
         <div className="relative pt-2">
           {hoveredPoint && (
-            <div className="absolute top-2 right-4 z-20 bg-[#18181b] text-white p-2 rounded-lg text-xs shadow-xl space-y-0.5 pointer-events-none">
+            <div className="absolute top-2 right-4 z-20 bg-[#18181b] text-white p-2.5 rounded-lg text-xs shadow-xl space-y-0.5 pointer-events-none border border-slate-700">
               <div className="font-semibold text-emerald-400">{hoveredPoint.label}</div>
-              <div className="text-[11px] text-[#a1a1aa]">
-                Date: {hoveredPoint.date} · Cycle time: {hoveredPoint.cycleDays} days
+              <div className="text-[11px] text-[#cbd5e1] flex items-center gap-2">
+                <span>Status: {hoveredPoint.stateName}</span>
+                <span>·</span>
+                <span>Created: {hoveredPoint.date}</span>
+                <span>·</span>
+                <span>Cycle: {hoveredPoint.cycleDays} days</span>
               </div>
             </div>
           )}
 
-          <div className="grid grid-cols-[140px_1fr] items-stretch gap-2">
-            {/* Y Axis Label & Ticks */}
-            <div className="flex">
-              <div className="flex items-center justify-center -rotate-90 text-[11px] font-medium text-[#6b7280] w-6 shrink-0 whitespace-nowrap">
-                Average work item cycle time (days)
+          {cycleTimePoints.length === 0 ? (
+            <div className="py-12 text-center text-xs text-[#6b7280]">
+              <TrendingUp className="h-8 w-8 mx-auto mb-2 text-[#94a3b8] opacity-60" />
+              <p className="font-semibold text-slate-800">No work items found</p>
+              <p className="mt-1">Create issues in {project.name} to track real cycle times.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-[140px_1fr] items-stretch gap-2">
+              {/* Y Axis Label & Ticks */}
+              <div className="flex">
+                <div className="flex items-center justify-center -rotate-90 text-[11px] font-medium text-[#6b7280] w-6 shrink-0 whitespace-nowrap">
+                  Average work item cycle time (days)
+                </div>
+                <div className="flex-1 flex flex-col justify-between text-right pr-2 text-xs font-mono text-[#6b7280] py-0.5">
+                  {yTicks.map((tick, i) => (
+                    <div key={`${tick}-${i}`} className="h-7 flex items-center justify-end">
+                      {tick} -
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="flex-1 flex flex-col justify-between text-right pr-2 text-xs font-mono text-[#6b7280] py-0.5">
-                {yTicks.map((tick) => (
-                  <div key={tick} className="h-7 flex items-center justify-end">
-                    {tick} -
-                  </div>
-                ))}
+
+              {/* Chart Area */}
+              <div className="relative flex flex-col justify-between border-l border-b border-[#e2e8f0] pl-1 pb-1">
+                {/* Horizontal Grid lines */}
+                <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+                  {yTicks.map((tick, i) => (
+                    <div
+                      key={`grid-${tick}-${i}`}
+                      className="border-t border-[#f1f5f9] w-full h-7 first:border-t-0"
+                    />
+                  ))}
+                </div>
+
+                {/* Data points and real line via SVG */}
+                <div className="relative h-44 w-full z-10">
+                  <svg viewBox="0 0 600 170" className="w-full h-full overflow-visible">
+                    {/* Baseline */}
+                    <line x1="20" y1="150" x2="580" y2="150" stroke="#cbd5e1" strokeWidth="1.5" />
+
+                    {/* Trend Line Connecting Real Points */}
+                    {pathD && (
+                      <path
+                        d={pathD}
+                        fill="none"
+                        stroke="#0052cc"
+                        strokeWidth="2"
+                        strokeDasharray="4 2"
+                        className="opacity-75"
+                      />
+                    )}
+
+                    {/* Dynamic Real Issue Points */}
+                    {pointsWithCoords.map((pt) => (
+                      <g key={pt.id}>
+                        {/* Vertical Drop Line to Baseline */}
+                        <line
+                          x1={pt.cx}
+                          y1={pt.cy}
+                          x2={pt.cx}
+                          y2={150}
+                          stroke="#e2e8f0"
+                          strokeWidth="1"
+                          strokeDasharray="2 2"
+                        />
+                        <circle
+                          cx={pt.cx}
+                          cy={pt.cy}
+                          r="5"
+                          fill={pt.color}
+                          stroke="#ffffff"
+                          strokeWidth="2"
+                          className="cursor-pointer transition-transform hover:scale-150"
+                          onMouseEnter={() => setHoveredPoint(pt)}
+                          onMouseLeave={() => setHoveredPoint(null)}
+                        />
+                      </g>
+                    ))}
+                  </svg>
+                </div>
+
+                {/* X Axis Dates */}
+                <div className="flex items-center justify-between pt-2 px-1 text-[11px] font-mono text-[#6b7280]">
+                  {pointsWithCoords.map((p) => (
+                    <div key={p.id} className="truncate max-w-[80px] text-center">
+                      {p.date}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-
-            {/* Chart Area */}
-            <div className="relative flex flex-col justify-between border-l border-b border-[#e2e8f0] pl-1 pb-1">
-              {/* Horizontal Grid lines */}
-              <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
-                {yTicks.map((tick) => (
-                  <div key={tick} className="border-t border-[#f1f5f9] w-full h-7 first:border-t-0" />
-                ))}
-              </div>
-
-              {/* Data points and line via SVG */}
-              <div className="relative h-44 w-full z-10">
-                <svg viewBox="0 0 600 170" className="w-full h-full overflow-visible">
-                  {/* Baseline connecting dots */}
-                  <line x1="20" y1="168" x2="580" y2="168" stroke="#cbd5e1" strokeWidth="1.5" />
-
-                  {/* Green trend line dropping to 0 */}
-                  <line x1="20" y1="160" x2="132" y2="168" stroke="#10b981" strokeWidth="2" />
-
-                  {/* Top orange dot at 28 */}
-                  <circle
-                    cx="20"
-                    cy="0"
-                    r="4.5"
-                    fill="#f59e0b"
-                    stroke="#ffffff"
-                    strokeWidth="1.5"
-                    className="cursor-pointer transition-transform hover:scale-150"
-                    onMouseEnter={() =>
-                      setHoveredPoint({
-                        date: "2026-09-15",
-                        cycleDays: 28,
-                        color: "#f59e0b",
-                        label: `${project.identifier}-1: Lead time backlog entry`,
-                      })
-                    }
-                    onMouseLeave={() => setHoveredPoint(null)}
-                  />
-
-                  {/* Green dot at 1.2 */}
-                  <circle
-                    cx="20"
-                    cy="160"
-                    r="4"
-                    fill="#10b981"
-                    stroke="#ffffff"
-                    strokeWidth="1.5"
-                    className="cursor-pointer transition-transform hover:scale-150"
-                    onMouseEnter={() => setHoveredPoint(cycleTimePoints[0])}
-                    onMouseLeave={() => setHoveredPoint(null)}
-                  />
-
-                  {/* Dot 2 (2026-09-21) */}
-                  <circle
-                    cx="132"
-                    cy="168"
-                    r="4"
-                    fill="#38bdf8"
-                    stroke="#ffffff"
-                    strokeWidth="1.5"
-                    className="cursor-pointer transition-transform hover:scale-150"
-                    onMouseEnter={() => setHoveredPoint(cycleTimePoints[1])}
-                    onMouseLeave={() => setHoveredPoint(null)}
-                  />
-
-                  {/* Dot 3 (2026-10-08) */}
-                  <circle
-                    cx="244"
-                    cy="168"
-                    r="4"
-                    fill="#f59e0b"
-                    stroke="#ffffff"
-                    strokeWidth="1.5"
-                    className="cursor-pointer transition-transform hover:scale-150"
-                    onMouseEnter={() => setHoveredPoint(cycleTimePoints[2])}
-                    onMouseLeave={() => setHoveredPoint(null)}
-                  />
-
-                  {/* Dot 4 (2026-10-09) */}
-                  <circle
-                    cx="356"
-                    cy="168"
-                    r="4"
-                    fill="#3b82f6"
-                    stroke="#ffffff"
-                    strokeWidth="1.5"
-                    className="cursor-pointer transition-transform hover:scale-150"
-                    onMouseEnter={() => setHoveredPoint(cycleTimePoints[3])}
-                    onMouseLeave={() => setHoveredPoint(null)}
-                  />
-
-                  {/* Dot 5 (2026-10-18) */}
-                  <circle
-                    cx="468"
-                    cy="168"
-                    r="4"
-                    fill="#94a3b8"
-                    stroke="#ffffff"
-                    strokeWidth="1.5"
-                    className="cursor-pointer transition-transform hover:scale-150"
-                    onMouseEnter={() => setHoveredPoint(cycleTimePoints[4])}
-                    onMouseLeave={() => setHoveredPoint(null)}
-                  />
-
-                  {/* Dot 6 (2026-10-19) */}
-                  <circle
-                    cx="580"
-                    cy="168"
-                    r="4"
-                    fill="#94a3b8"
-                    stroke="#ffffff"
-                    strokeWidth="1.5"
-                    className="cursor-pointer transition-transform hover:scale-150"
-                    onMouseEnter={() => setHoveredPoint(cycleTimePoints[5])}
-                    onMouseLeave={() => setHoveredPoint(null)}
-                  />
-                </svg>
-              </div>
-
-              {/* X Axis Dates */}
-              <div className="flex items-center justify-between pt-2 px-1 text-[11px] font-mono text-[#6b7280]">
-                {cycleTimePoints.map((p, i) => (
-                  <div key={i} className="truncate max-w-[80px]">
-                    {p.date}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          )}
 
           {/* Bottom Labels */}
           <div className="flex items-center justify-between pt-2 px-4 text-xs font-semibold text-[#6b7280]">

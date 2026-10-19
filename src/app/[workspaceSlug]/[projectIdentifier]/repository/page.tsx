@@ -2,6 +2,7 @@ import React from "react";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { ProjectRepositoryView } from "@/components/repository/ProjectRepositoryView";
+import { getProjectRepositoryData } from "@/lib/git-repository";
 import {
   WorkspaceWithDetails,
   ProjectWithDetails,
@@ -80,12 +81,15 @@ export default async function RepositoryPage({
     take: 50,
   });
 
+  const repoData = await getProjectRepositoryData(project.id);
+
   return (
     <div className="flex-1 overflow-y-auto">
       <ProjectRepositoryView
         workspace={workspace as unknown as WorkspaceWithDetails}
         project={project as unknown as ProjectWithDetails}
         issues={issues as unknown as IssueWithDetails[]}
+        initialRepoData={repoData || undefined}
       />
     </div>
   );
