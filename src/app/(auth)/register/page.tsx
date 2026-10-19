@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Lock, Mail, User, ArrowRight } from "lucide-react";
+import { Mail, Lock, User } from "lucide-react";
+import { Logo } from "@/components/ui/Logo";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -34,7 +35,11 @@ export default function RegisterPage() {
         return;
       }
 
-      router.push("/create-workspace");
+      if (data.requiresVerification) {
+        router.push(`/verify-email?email=${encodeURIComponent(email.trim())}`);
+      } else {
+        router.push("/create-workspace");
+      }
     } catch {
       setError("An unexpected error occurred");
       setLoading(false);
@@ -42,79 +47,80 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-[#09090b] p-4 text-zinc-100">
-      <div className="w-full max-w-md space-y-6 rounded-2xl border border-zinc-800 bg-[#121215] p-8 shadow-2xl">
-        <div className="space-y-2 text-center">
-          <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white font-bold text-lg shadow-lg shadow-indigo-500/20 mb-2">
-            🚀
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight">Create your account</h1>
-          <p className="text-xs text-zinc-400">
-            Join Space to build and ship software at lightspeed
+    <div className="flex min-h-screen w-full items-center justify-center bg-[#f8f9fa] p-4 text-[#111827] font-sans">
+      <div className="w-full max-w-sm space-y-6 rounded-xl border border-[#e5e7eb] bg-white p-7 shadow-xl">
+        <div className="space-y-2 text-center flex flex-col items-center">
+          <Logo size="md" showText={false} className="mb-1" />
+          <h1 className="text-xl font-bold tracking-tight text-[#111827]">Create your account</h1>
+          <p className="text-xs text-[#6b7280]">
+            Get started with modern issue tracking and planning
           </p>
         </div>
 
         {error && (
-          <div className="rounded-lg border border-red-900/60 bg-red-950/40 p-3 text-xs text-red-400">
+          <div className="rounded-lg border border-red-200 bg-red-50 p-2.5 text-xs text-red-600">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+        <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
           <div>
-            <label className="text-zinc-400 block mb-1">Full name</label>
+            <label className="text-[#374151] block mb-1 font-medium">Full Name</label>
             <div className="relative">
-              <User className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+              <User className="absolute left-3 top-2.5 h-4 w-4 text-[#9ca3af]" />
               <Input
                 type="text"
                 required
-                placeholder="Ada Lovelace"
+                placeholder="Alex Rivera"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="pl-9"
+                className="pl-9 h-9 text-xs bg-white border-[#d1d5db] text-[#111827] placeholder:text-[#9ca3af] focus:border-[#3e63dd]"
               />
             </div>
           </div>
 
           <div>
-            <label className="text-zinc-400 block mb-1">Email address</label>
+            <label className="text-[#374151] block mb-1 font-medium">Email address</label>
             <div className="relative">
-              <Mail className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+              <Mail className="absolute left-3 top-2.5 h-4 w-4 text-[#9ca3af]" />
               <Input
                 type="email"
                 required
-                placeholder="ada@company.com"
+                placeholder="name@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="pl-9"
+                className="pl-9 h-9 text-xs bg-white border-[#d1d5db] text-[#111827] placeholder:text-[#9ca3af] focus:border-[#3e63dd]"
               />
             </div>
           </div>
 
           <div>
-            <label className="text-zinc-400 block mb-1">Password</label>
+            <label className="text-[#374151] block mb-1 font-medium">Password</label>
             <div className="relative">
-              <Lock className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+              <Lock className="absolute left-3 top-2.5 h-4 w-4 text-[#9ca3af]" />
               <Input
                 type="password"
                 required
-                minLength={6}
-                placeholder="At least 6 characters"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="pl-9"
+                className="pl-9 h-9 text-xs bg-white border-[#d1d5db] text-[#111827] placeholder:text-[#9ca3af] focus:border-[#3e63dd]"
               />
             </div>
           </div>
 
-          <Button type="submit" disabled={loading} className="w-full mt-2 font-semibold">
-            {loading ? "Creating account..." : "Create Account"}
+          <Button
+            type="submit"
+            disabled={loading}
+            className="w-full h-9 mt-1 text-xs font-medium bg-[#3e63dd] hover:bg-[#3451b2] text-white shadow-xs cursor-pointer"
+          >
+            {loading ? "Creating account..." : "Get started"}
           </Button>
         </form>
 
-        <div className="text-center text-xs text-zinc-500">
+        <div className="text-center text-xs text-[#6b7280]">
           Already have an account?{" "}
-          <Link href="/login" className="font-semibold text-indigo-400 hover:underline">
+          <Link href="/login" className="font-medium text-[#3e63dd] hover:underline">
             Sign in
           </Link>
         </div>

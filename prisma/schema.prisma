@@ -81,6 +81,7 @@ model WorkspaceMember {
   user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   @@unique([workspaceId, userId])
+  @@index([userId])
 }
 
 model WorkspaceInvite {
@@ -130,6 +131,7 @@ model ProjectMember {
   user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   @@unique([projectId, userId])
+  @@index([userId])
 }
 
 model State {
@@ -196,6 +198,8 @@ model Issue {
   @@index([projectId, stateId])
   @@index([projectId, cycleId])
   @@index([projectId, moduleId])
+  @@index([createdById])
+  @@index([dueDate])
 }
 
 model IssueAssignee {
@@ -242,6 +246,8 @@ model IssueComment {
   
   issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([issueId, createdAt])
 }
 
 model IssueActivity {
@@ -256,6 +262,8 @@ model IssueActivity {
   
   issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([issueId, createdAt])
 }
 
 model IssueAttachment {
@@ -268,6 +276,8 @@ model IssueAttachment {
   createdAt DateTime @default(now())
   
   issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  @@index([issueId])
 }
 
 model Cycle {
@@ -328,4 +338,7 @@ model Notification {
   createdAt DateTime @default(now())
   
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
 }

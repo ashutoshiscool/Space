@@ -3,20 +3,31 @@
 import React from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { IssueWithDetails } from "@/lib/types";
+import { IssueWithDetails, User } from "@/lib/types";
+import { State } from "@prisma/client";
 import { useSpaceStore } from "@/lib/store";
-import { getPriorityMeta, formatDate } from "@/lib/utils";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MessageSquare, GitBranch, Calendar, AlertCircle } from "lucide-react";
+import { formatDate } from "@/lib/utils";
+import { PriorityIcon } from "@/components/ui/PriorityIcon";
+import { QuickAssignPopover } from "@/components/issues/QuickAssignPopover";
+import { QuickStatePopover } from "@/components/issues/QuickStatePopover";
+import { MessageSquare, GitBranch, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface IssueCardProps {
   issue: IssueWithDetails;
   projectIdentifier: string;
   isOverlay?: boolean;
+  projectMembers?: { user: Pick<User, "id" | "name" | "email" | "avatarUrl"> }[];
+  states?: State[];
 }
 
-export function IssueCard({ issue, projectIdentifier, isOverlay }: IssueCardProps) {
+export function IssueCard({
+  issue,
+  projectIdentifier,
+  isOverlay,
+  projectMembers,
+  states,
+}: IssueCardProps) {
   const setActiveIssueId = useSpaceStore((s) => s.setActiveIssueId);
 
   const {
@@ -39,8 +50,6 @@ export function IssueCard({ issue, projectIdentifier, isOverlay }: IssueCardProp
     transition,
   };
 
-  const priorityMeta = getPriorityMeta(issue.priority);
-
   return (
     <div
       ref={setNodeRef}
@@ -49,40 +58,32 @@ export function IssueCard({ issue, projectIdentifier, isOverlay }: IssueCardProp
       {...listeners}
       onClick={() => setActiveIssueId(issue.id)}
       className={cn(
-        "group relative flex flex-col gap-2 rounded-lg border border-zinc-800/80 bg-[#121215] p-3 text-left shadow-sm transition-all hover:border-zinc-700 hover:shadow-md cursor-grab active:cursor-grabbing",
-        isDragging && "opacity-40 border-indigo-500/50 shadow-indigo-500/10",
-        isOverlay && "rotate-2 shadow-2xl border-indigo-500 bg-[#18181d] scale-105 cursor-grabbing z-50"
+        "group relative flex flex-col gap-2 rounded-lg border border-[#e5e7eb] bg-white p-3 text-left shadow-xs transition-all hover:border-[#cbd5e1] hover:shadow-sm cursor-grab active:cursor-grabbing select-none font-sans",
+        isDragging && "opacity-30 border-[#3e63dd]/40",
+        isOverlay && "rotate-1 shadow-2xl border-[#3e63dd] bg-white scale-[1.02] cursor-grabbing z-50"
       )}
     >
-      {/* Top row: Issue Key, Priority, and Estimate */}
+      {/* Top row: Issue Key, Priority glyph, Estimate */}
       <div className="flex items-center justify-between text-xs">
         <div className="flex items-center gap-1.5">
-          <span className="font-mono font-medium text-zinc-400 group-hover:text-indigo-400 transition-colors">
+          {states && states.length > 0 ? (
+            <QuickStatePopover issueId={issue.id} currentState={issue.state} states={states} size={13} />
+          ) : null}
+          <PriorityIcon priority={issue.priority} size={13} />
+          <span className="font-mono text-[11px] font-medium text-[#6b7280] group-hover:text-[#111827] transition-colors">
             {projectIdentifier}-{issue.sequenceId}
-          </span>
-          <span
-            className={cn(
-              "flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold",
-              priorityMeta.bg,
-              priorityMeta.color,
-              priorityMeta.border,
-              "border"
-            )}
-          >
-            <span className={cn("h-1.5 w-1.5 rounded-full", priorityMeta.dot)} />
-            {priorityMeta.label}
           </span>
         </div>
 
         {issue.estimate !== null && issue.estimate !== undefined && (
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-800/80 text-[10px] font-mono font-semibold text-zinc-300">
-            {issue.estimate}
+          <span className="flex h-4 min-w-[16px] items-center justify-center rounded bg-[#f3f4f6] px-1 font-mono text-[10px] font-medium text-[#4b5563] border border-[#e5e7eb]">
+            {issue.estimate} pts
           </span>
         )}
       </div>
 
       {/* Title */}
-      <h4 className="text-sm font-medium leading-snug text-zinc-100 line-clamp-2">
+      <h4 className="text-xs font-medium leading-relaxed text-[#111827] line-clamp-2">
         {issue.title}
       </h4>
 
@@ -92,7 +93,7 @@ export function IssueCard({ issue, projectIdentifier, isOverlay }: IssueCardProp
           {issue.labels.map(({ label }) => (
             <span
               key={label.id}
-              className="rounded px-1.5 py-0.5 text-[10px] font-medium"
+              className="rounded px-1.5 py-0.2 text-[10px] font-medium leading-normal"
               style={{
                 backgroundColor: `${label.color}15`,
                 color: label.color,
@@ -106,13 +107,15 @@ export function IssueCard({ issue, projectIdentifier, isOverlay }: IssueCardProp
       )}
 
       {/* Footer: Due date, Sub-issues, Comments count & Assignees */}
-      <div className="flex items-center justify-between pt-1 border-t border-zinc-800/40 text-[11px] text-zinc-500">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between pt-1 border-t border-[#f1f3f5] text-[11px] text-[#6b7280]">
+        <div className="flex items-center gap-2.5">
           {issue.dueDate && (
             <span
               className={cn(
-                "flex items-center gap-1",
-                new Date(issue.dueDate) < new Date() && "text-rose-400 font-medium"
+                "flex items-center gap-1 font-mono text-[10px]",
+                new Date(issue.dueDate) < new Date() && issue.state?.group !== "COMPLETED"
+                  ? "text-rose-600 font-semibold"
+                  : "text-[#6b7280]"
               )}
             >
               <Calendar className="h-3 w-3" />
@@ -120,34 +123,28 @@ export function IssueCard({ issue, projectIdentifier, isOverlay }: IssueCardProp
             </span>
           )}
 
-          {issue._count && issue._count.subIssues > 0 && (
-            <span className="flex items-center gap-1 hover:text-zinc-300">
+          {issue.subIssues && issue.subIssues.length > 0 && (
+            <span className="flex items-center gap-1 text-[10px] text-[#6b7280]" title={`${issue.subIssues.length} sub-issues`}>
               <GitBranch className="h-3 w-3" />
-              {issue._count.subIssues}
+              <span>{issue.subIssues.length}</span>
             </span>
           )}
 
-          {issue._count && issue._count.comments > 0 && (
-            <span className="flex items-center gap-1 hover:text-zinc-300">
+          {issue.comments && issue.comments.length > 0 && (
+            <span className="flex items-center gap-1 text-[10px] text-[#6b7280]" title={`${issue.comments.length} comments`}>
               <MessageSquare className="h-3 w-3" />
-              {issue._count.comments}
+              <span>{issue.comments.length}</span>
             </span>
           )}
         </div>
 
-        {/* Assignee Avatars */}
-        {issue.assignees && issue.assignees.length > 0 && (
-          <div className="flex -space-x-1.5 overflow-hidden">
-            {issue.assignees.map(({ user }) => (
-              <Avatar key={user.id} className="h-5 w-5 border border-[#121215]">
-                {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.name} />}
-                <AvatarFallback className="text-[9px]">
-                  {user.name.substring(0, 1)}
-                </AvatarFallback>
-              </Avatar>
-            ))}
-          </div>
-        )}
+        {/* Interactive Assignee Small Circle */}
+        <QuickAssignPopover
+          issueId={issue.id}
+          assignees={issue.assignees}
+          projectMembers={projectMembers}
+          size="sm"
+        />
       </div>
     </div>
   );

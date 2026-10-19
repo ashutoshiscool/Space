@@ -93,7 +93,7 @@ export async function POST(
           name,
           identifier: identifier.toUpperCase(),
           description,
-          icon: icon || "📁",
+          icon: icon || null,
           members: {
             create: {
               userId: user.id,

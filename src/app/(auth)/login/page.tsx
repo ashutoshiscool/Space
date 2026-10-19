@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Lock, Mail, Sparkles } from "lucide-react";
+import { Mail, Lock } from "lucide-react";
+import { Logo } from "@/components/ui/Logo";
 
 function LoginFormContent() {
   const [email, setEmail] = useState("");
@@ -30,6 +31,10 @@ function LoginFormContent() {
 
       const data = await res.json();
       if (!res.ok) {
+        if (data.requiresVerification && data.email) {
+          router.push(`/verify-email?email=${encodeURIComponent(data.email)}`);
+          return;
+        }
         setError(data.error || "Login failed");
         setLoading(false);
         return;
@@ -55,88 +60,89 @@ function LoginFormContent() {
   };
 
   return (
-    <div className="w-full max-w-md space-y-6 rounded-2xl border border-zinc-800 bg-[#121215] p-8 shadow-2xl">
-      <div className="space-y-2 text-center">
-        <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white font-bold text-lg shadow-lg shadow-indigo-500/20 mb-2">
-          🚀
-        </div>
-        <h1 className="text-2xl font-bold tracking-tight">Sign in to Space</h1>
-        <p className="text-xs text-zinc-400">
-          Next-gen issue tracker and product planning system
+    <div className="w-full max-w-sm space-y-6 rounded-xl border border-[#e5e7eb] bg-white p-7 shadow-xl font-sans">
+      <div className="space-y-2 text-center flex flex-col items-center">
+        <Logo size="md" showText={false} className="mb-1" />
+        <h1 className="text-xl font-bold tracking-tight text-[#111827]">Sign in to Space</h1>
+        <p className="text-xs text-[#6b7280]">
+          Enter your credentials to access your workspace
         </p>
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-900/60 bg-red-950/40 p-3 text-xs text-red-400">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-2.5 text-xs text-red-600">
           {error}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+      <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
         <div>
-          <label className="text-zinc-400 block mb-1">Email address</label>
+          <label className="text-[#374151] block mb-1 font-medium">Email address</label>
           <div className="relative">
-            <Mail className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+            <Mail className="absolute left-3 top-2.5 h-4 w-4 text-[#9ca3af]" />
             <Input
               type="email"
               required
               placeholder="name@company.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="pl-9"
+              className="pl-9 h-9 text-xs bg-white border-[#d1d5db] text-[#111827] placeholder:text-[#9ca3af] focus:border-[#3e63dd]"
             />
           </div>
         </div>
 
         <div>
-          <label className="text-zinc-400 block mb-1">Password</label>
+          <label className="text-[#374151] block mb-1 font-medium">Password</label>
           <div className="relative">
-            <Lock className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+            <Lock className="absolute left-3 top-2.5 h-4 w-4 text-[#9ca3af]" />
             <Input
               type="password"
               required
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="pl-9"
+              className="pl-9 h-9 text-xs bg-white border-[#d1d5db] text-[#111827] placeholder:text-[#9ca3af] focus:border-[#3e63dd]"
             />
           </div>
         </div>
 
-        <Button type="submit" disabled={loading} className="w-full mt-2 font-semibold">
-          {loading ? "Signing in..." : "Continue to Space"}
+        <Button
+          type="submit"
+          disabled={loading}
+          className="w-full h-9 mt-1 text-xs font-medium bg-[#3e63dd] hover:bg-[#3451b2] text-white shadow-xs cursor-pointer"
+        >
+          {loading ? "Signing in..." : "Continue"}
         </Button>
       </form>
 
       {/* Quick Demo Switcher */}
-      <div className="rounded-xl border border-zinc-800/80 bg-zinc-950/60 p-3 space-y-2 text-xs">
-        <div className="flex items-center gap-1.5 text-zinc-400 font-semibold text-[11px] uppercase tracking-wider">
-          <Sparkles className="h-3 w-3 text-indigo-400" />
-          <span>One-Click Demo Profiles</span>
+      <div className="rounded-lg border border-[#e5e7eb] bg-[#f8f9fa] p-3 space-y-2 text-xs">
+        <div className="text-[10px] text-[#6b7280] font-semibold uppercase tracking-wider">
+          Demo Accounts
         </div>
         <div className="flex flex-col gap-1.5">
           <button
             type="button"
             onClick={() => handleQuickLogin("alex@space.dev")}
-            className="flex items-center justify-between rounded bg-zinc-900 px-2.5 py-1.5 text-left text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors cursor-pointer"
+            className="flex items-center justify-between rounded-md border border-[#e5e7eb] bg-white px-2.5 py-1.5 text-left text-[#111827] hover:border-[#3e63dd] shadow-xs transition-colors cursor-pointer"
           >
-            <span>Alex Rivera <strong className="text-indigo-400 font-normal">(Owner)</strong></span>
-            <span className="text-[10px] text-zinc-500 font-mono">alex@space.dev</span>
+            <span className="font-medium text-xs">Alex Rivera <span className="text-[10px] text-[#3e63dd] font-mono">(Owner)</span></span>
+            <span className="text-[10px] text-[#6b7280] font-mono">alex@space.dev</span>
           </button>
           <button
             type="button"
             onClick={() => handleQuickLogin("sarah@space.dev")}
-            className="flex items-center justify-between rounded bg-zinc-900 px-2.5 py-1.5 text-left text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors cursor-pointer"
+            className="flex items-center justify-between rounded-md border border-[#e5e7eb] bg-white px-2.5 py-1.5 text-left text-[#111827] hover:border-[#3e63dd] shadow-xs transition-colors cursor-pointer"
           >
-            <span>Sarah Chen <strong className="text-purple-400 font-normal">(Admin)</strong></span>
-            <span className="text-[10px] text-zinc-500 font-mono">sarah@space.dev</span>
+            <span className="font-medium text-xs">Sarah Chen <span className="text-[10px] text-purple-600 font-mono">(Admin)</span></span>
+            <span className="text-[10px] text-[#6b7280] font-mono">sarah@space.dev</span>
           </button>
         </div>
       </div>
 
-      <div className="text-center text-xs text-zinc-500">
+      <div className="text-center text-xs text-[#6b7280]">
         Don&apos;t have an account?{" "}
-        <Link href="/register" className="font-semibold text-indigo-400 hover:underline">
+        <Link href="/register" className="font-medium text-[#3e63dd] hover:underline">
           Sign up
         </Link>
       </div>
@@ -146,8 +152,8 @@ function LoginFormContent() {
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-[#09090b] p-4 text-zinc-100">
-      <Suspense fallback={<div className="text-xs text-zinc-500">Loading...</div>}>
+    <div className="flex min-h-screen w-full items-center justify-center bg-[#f8f9fa] p-4 text-[#111827]">
+      <Suspense fallback={<div className="text-xs text-[#6b7280]">Loading...</div>}>
         <LoginFormContent />
       </Suspense>
     </div>

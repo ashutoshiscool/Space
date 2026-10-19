@@ -70,7 +70,7 @@ export function TipTapEditor({
     editorProps: {
       attributes: {
         class:
-          "tiptap-content min-h-[140px] w-full text-sm text-zinc-200 outline-none focus:outline-none p-3",
+          "tiptap-content min-h-[140px] w-full text-sm text-[#111827] outline-none focus:outline-none p-3",
       },
     },
     onUpdate: ({ editor }) => {
@@ -91,7 +91,7 @@ export function TipTapEditor({
     return (
       <div
         className={cn(
-          "min-h-[140px] w-full rounded-lg border border-zinc-800 bg-zinc-900/60 p-3 text-sm text-zinc-500",
+          "min-h-[140px] w-full rounded-lg border border-[#e5e7eb] bg-[#f8f9fa] p-3 text-sm text-[#9ca3af]",
           className
         )}
       >
@@ -103,18 +103,18 @@ export function TipTapEditor({
   return (
     <div
       className={cn(
-        "rounded-lg border border-zinc-800/90 bg-[#121215] transition-all focus-within:border-zinc-700",
+        "rounded-lg border border-[#e5e7eb] bg-white transition-all focus-within:border-[#3e63dd] shadow-xs",
         className
       )}
     >
       {editable && (
-        <div className="flex flex-wrap items-center gap-1 border-b border-zinc-800/70 bg-zinc-900/50 px-2 py-1.5 text-zinc-400">
+        <div className="flex flex-wrap items-center gap-1 border-b border-[#e5e7eb] bg-[#f8f9fa] px-2 py-1.5 text-[#6b7280]">
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleBold().run()}
             className={cn(
-              "rounded p-1 hover:bg-zinc-800 hover:text-zinc-200 transition-colors",
-              editor.isActive("bold") && "bg-zinc-800 text-indigo-400"
+              "rounded p-1 hover:bg-[#e5e7eb] hover:text-[#111827] transition-colors",
+              editor.isActive("bold") && "bg-white text-[#3e63dd] shadow-xs border border-[#e5e7eb]"
             )}
             title="Bold (Ctrl+B)"
           >
@@ -124,20 +124,20 @@ export function TipTapEditor({
             type="button"
             onClick={() => editor.chain().focus().toggleItalic().run()}
             className={cn(
-              "rounded p-1 hover:bg-zinc-800 hover:text-zinc-200 transition-colors",
-              editor.isActive("italic") && "bg-zinc-800 text-indigo-400"
+              "rounded p-1 hover:bg-[#e5e7eb] hover:text-[#111827] transition-colors",
+              editor.isActive("italic") && "bg-white text-[#3e63dd] shadow-xs border border-[#e5e7eb]"
             )}
             title="Italic (Ctrl+I)"
           >
             <Italic className="h-3.5 w-3.5" />
           </button>
-          <div className="h-3.5 w-px bg-zinc-800 mx-1" />
+          <div className="h-3.5 w-px bg-[#e5e7eb] mx-1" />
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
             className={cn(
-              "rounded p-1 hover:bg-zinc-800 hover:text-zinc-200 transition-colors",
-              editor.isActive("heading", { level: 1 }) && "bg-zinc-800 text-indigo-400"
+              "rounded p-1 hover:bg-[#e5e7eb] hover:text-[#111827] transition-colors",
+              editor.isActive("heading", { level: 1 }) && "bg-white text-[#3e63dd] shadow-xs border border-[#e5e7eb]"
             )}
             title="Heading 1"
           >
@@ -147,20 +147,20 @@ export function TipTapEditor({
             type="button"
             onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
             className={cn(
-              "rounded p-1 hover:bg-zinc-800 hover:text-zinc-200 transition-colors",
-              editor.isActive("heading", { level: 2 }) && "bg-zinc-800 text-indigo-400"
+              "rounded p-1 hover:bg-[#e5e7eb] hover:text-[#111827] transition-colors",
+              editor.isActive("heading", { level: 2 }) && "bg-white text-[#3e63dd] shadow-xs border border-[#e5e7eb]"
             )}
             title="Heading 2"
           >
             <Heading2 className="h-3.5 w-3.5" />
           </button>
-          <div className="h-3.5 w-px bg-zinc-800 mx-1" />
+          <div className="h-3.5 w-px bg-[#e5e7eb] mx-1" />
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleBulletList().run()}
             className={cn(
-              "rounded p-1 hover:bg-zinc-800 hover:text-zinc-200 transition-colors",
-              editor.isActive("bulletList") && "bg-zinc-800 text-indigo-400"
+              "rounded p-1 hover:bg-[#e5e7eb] hover:text-[#111827] transition-colors",
+              editor.isActive("bulletList") && "bg-white text-[#3e63dd] shadow-xs border border-[#e5e7eb]"
             )}
             title="Bullet list"
           >
@@ -170,8 +170,8 @@ export function TipTapEditor({
             type="button"
             onClick={() => editor.chain().focus().toggleTaskList().run()}
             className={cn(
-              "rounded p-1 hover:bg-zinc-800 hover:text-zinc-200 transition-colors",
-              editor.isActive("taskList") && "bg-zinc-800 text-indigo-400"
+              "rounded p-1 hover:bg-[#e5e7eb] hover:text-[#111827] transition-colors",
+              editor.isActive("taskList") && "bg-white text-[#3e63dd] shadow-xs border border-[#e5e7eb]"
             )}
             title="Task list"
           >
@@ -181,8 +181,8 @@ export function TipTapEditor({
             type="button"
             onClick={() => editor.chain().focus().toggleCodeBlock().run()}
             className={cn(
-              "rounded p-1 hover:bg-zinc-800 hover:text-zinc-200 transition-colors",
-              editor.isActive("codeBlock") && "bg-zinc-800 text-indigo-400"
+              "rounded p-1 hover:bg-[#e5e7eb] hover:text-[#111827] transition-colors",
+              editor.isActive("codeBlock") && "bg-white text-[#3e63dd] shadow-xs border border-[#e5e7eb]"
             )}
             title="Code block"
           >
@@ -192,8 +192,8 @@ export function TipTapEditor({
             type="button"
             onClick={() => editor.chain().focus().toggleBlockquote().run()}
             className={cn(
-              "rounded p-1 hover:bg-zinc-800 hover:text-zinc-200 transition-colors",
-              editor.isActive("blockquote") && "bg-zinc-800 text-indigo-400"
+              "rounded p-1 hover:bg-[#e5e7eb] hover:text-[#111827] transition-colors",
+              editor.isActive("blockquote") && "bg-white text-[#3e63dd] shadow-xs border border-[#e5e7eb]"
             )}
             title="Quote"
           >
@@ -208,7 +208,7 @@ export function TipTapEditor({
                 .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
                 .run()
             }
-            className="rounded p-1 hover:bg-zinc-800 hover:text-zinc-200 transition-colors"
+            className="rounded p-1 hover:bg-[#e5e7eb] hover:text-[#111827] transition-colors"
             title="Insert table"
           >
             <TableIcon className="h-3.5 w-3.5" />

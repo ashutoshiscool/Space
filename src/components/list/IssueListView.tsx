@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { State, IssuePriority, User } from "@prisma/client";
-import { IssueWithDetails } from "@/lib/types";
+import { State, IssuePriority, User, IssueWithDetails } from "@/lib/types";
 import { useSpaceStore } from "@/lib/store";
-import { getPriorityMeta, formatDate, cn } from "@/lib/utils";
+import { formatDate, cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { PriorityIcon } from "@/components/ui/PriorityIcon";
+import { StateIcon } from "@/components/ui/StateIcon";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -14,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { MessageSquare, GitBranch, Archive, Check } from "lucide-react";
+import { DatePicker } from "@/components/ui/DatePicker";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface IssueListViewProps {
@@ -90,15 +92,15 @@ export function IssueListView({
   });
 
   return (
-    <div className="relative flex flex-col w-full rounded-xl border border-zinc-800/80 bg-[#101014] overflow-hidden shadow-sm">
+    <div className="relative flex flex-col w-full rounded-xl border border-[#e5e7eb] bg-white overflow-hidden shadow-xs">
       {/* Table Header */}
-      <div className="grid grid-cols-[36px_110px_1fr_130px_140px_140px_100px_60px] items-center border-b border-zinc-800 bg-[#141418] px-3 py-2 text-xs font-semibold text-zinc-400 select-none">
+      <div className="grid grid-cols-[36px_100px_1fr_120px_130px_130px_90px_60px] items-center border-b border-[#e5e7eb] bg-[#f8f9fa] px-3 py-2 text-[11px] font-semibold text-[#6b7280] select-none uppercase tracking-wider">
         <div className="flex items-center justify-center">
           <input
             type="checkbox"
             checked={issues.length > 0 && selectedIds.length === issues.length}
             onChange={toggleSelectAll}
-            className="h-3.5 w-3.5 rounded border-zinc-700 bg-zinc-900 text-indigo-600 focus:ring-0 cursor-pointer"
+            className="h-3.5 w-3.5 rounded border-[#d1d5db] bg-white text-[#3e63dd] focus:ring-0 cursor-pointer"
           />
         </div>
         <div>Identifier</div>
@@ -111,18 +113,17 @@ export function IssueListView({
       </div>
 
       {/* Rows */}
-      <div className="divide-y divide-zinc-800/60 overflow-y-auto max-h-[calc(100vh-280px)]">
+      <div className="divide-y divide-[#f1f3f5] overflow-y-auto max-h-[calc(100vh-280px)]">
         {issues.map((issue) => {
           const isSelected = selectedIds.includes(issue.id);
-          const priorityMeta = getPriorityMeta(issue.priority);
 
           return (
             <div
               key={issue.id}
               onClick={() => setActiveIssueId(issue.id)}
               className={cn(
-                "grid grid-cols-[36px_110px_1fr_130px_140px_140px_100px_60px] items-center px-3 py-2.5 text-xs transition-colors hover:bg-zinc-800/40 cursor-pointer group",
-                isSelected && "bg-indigo-950/20"
+                "grid grid-cols-[36px_100px_1fr_120px_130px_130px_90px_60px] items-center px-3 py-2.5 text-xs transition-colors hover:bg-[#f8f9fa] cursor-pointer group text-[#111827]",
+                isSelected && "bg-[#eff6ff]"
               )}
             >
               {/* Checkbox */}
@@ -134,18 +135,18 @@ export function IssueListView({
                   type="checkbox"
                   checked={isSelected}
                   onChange={() => {}}
-                  className="h-3.5 w-3.5 rounded border-zinc-700 bg-zinc-900 text-indigo-600 focus:ring-0 cursor-pointer"
+                  className="h-3.5 w-3.5 rounded border-[#d1d5db] bg-white text-[#3e63dd] focus:ring-0 cursor-pointer"
                 />
               </div>
 
               {/* Identifier */}
-              <div className="font-mono text-zinc-400 group-hover:text-indigo-400 font-medium">
+              <div className="font-mono text-[#6b7280] group-hover:text-[#111827] font-medium text-xs">
                 {projectIdentifier}-{issue.sequenceId}
               </div>
 
               {/* Title & comments/sub-issues badges */}
               <div className="flex items-center gap-2 pr-4 overflow-hidden">
-                <span className="truncate font-medium text-zinc-100">
+                <span className="truncate font-medium text-[#111827]">
                   {issue.title}
                 </span>
 
@@ -168,14 +169,14 @@ export function IssueListView({
                 )}
 
                 {issue._count && issue._count.subIssues > 0 && (
-                  <span className="flex items-center gap-1 text-[11px] text-zinc-500 shrink-0">
+                  <span className="flex items-center gap-1 text-[11px] text-[#9ca3af] shrink-0">
                     <GitBranch className="h-3 w-3" />
                     {issue._count.subIssues}
                   </span>
                 )}
 
                 {issue._count && issue._count.comments > 0 && (
-                  <span className="flex items-center gap-1 text-[11px] text-zinc-500 shrink-0">
+                  <span className="flex items-center gap-1 text-[11px] text-[#9ca3af] shrink-0">
                     <MessageSquare className="h-3 w-3" />
                     {issue._count.comments}
                   </span>
@@ -185,32 +186,31 @@ export function IssueListView({
               {/* Inline Priority Dropdown */}
               <div onClick={(e) => e.stopPropagation()}>
                 <DropdownMenu>
-                  <DropdownMenuTrigger className="flex items-center gap-1.5 rounded px-2 py-1 hover:bg-zinc-800 transition-colors cursor-pointer outline-none">
-                    <span className={cn("h-2 w-2 rounded-full", priorityMeta.dot)} />
-                    <span className={priorityMeta.color}>{priorityMeta.label}</span>
+                  <DropdownMenuTrigger className="flex items-center gap-1.5 rounded px-2 py-1 hover:bg-[#f3f4f6] transition-colors cursor-pointer outline-none">
+                    <PriorityIcon priority={issue.priority} size={14} />
+                    <span className="text-[#374151] capitalize text-xs">
+                      {issue.priority.toLowerCase()}
+                    </span>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">
-                    {Object.values(IssuePriority).map((prio) => {
-                      const meta = getPriorityMeta(prio);
-                      return (
-                        <DropdownMenuItem
-                          key={prio}
-                          onClick={() =>
-                            updateIssueMutation.mutate({
-                              issueId: issue.id,
-                              data: { priority: prio },
-                            })
-                          }
-                          className="flex items-center gap-2"
-                        >
-                          <span className={cn("h-2 w-2 rounded-full", meta.dot)} />
-                          <span>{meta.label}</span>
-                          {issue.priority === prio && (
-                            <Check className="ml-auto h-3 w-3 text-indigo-400" />
-                          )}
-                        </DropdownMenuItem>
-                      );
-                    })}
+                    {(Object.values(IssuePriority) as IssuePriority[]).map((prio) => (
+                      <DropdownMenuItem
+                        key={prio}
+                        onClick={() =>
+                          updateIssueMutation.mutate({
+                            issueId: issue.id,
+                            data: { priority: prio },
+                          })
+                        }
+                        className="flex items-center gap-2"
+                      >
+                        <PriorityIcon priority={prio} size={14} />
+                        <span className="capitalize">{prio.toLowerCase()}</span>
+                        {issue.priority === prio && (
+                          <Check className="ml-auto h-3.5 w-3.5 text-[#3e63dd]" />
+                        )}
+                      </DropdownMenuItem>
+                    ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -218,12 +218,9 @@ export function IssueListView({
               {/* Inline State Dropdown */}
               <div onClick={(e) => e.stopPropagation()}>
                 <DropdownMenu>
-                  <DropdownMenuTrigger className="flex items-center gap-1.5 rounded px-2 py-1 hover:bg-zinc-800 transition-colors cursor-pointer outline-none">
-                    <span
-                      className="h-2 w-2 rounded-full"
-                      style={{ backgroundColor: issue.state.color }}
-                    />
-                    <span className="truncate text-zinc-200">{issue.state.name}</span>
+                  <DropdownMenuTrigger className="flex items-center gap-1.5 rounded px-2 py-1 hover:bg-[#f3f4f6] transition-colors cursor-pointer outline-none">
+                    <StateIcon group={issue.state.group} color={issue.state.color} size={13} />
+                    <span className="truncate text-[#374151] text-xs font-medium">{issue.state.name}</span>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">
                     {states.map((st) => (
@@ -237,13 +234,10 @@ export function IssueListView({
                         }
                         className="flex items-center gap-2"
                       >
-                        <span
-                          className="h-2 w-2 rounded-full"
-                          style={{ backgroundColor: st.color }}
-                        />
+                        <StateIcon group={st.group} color={st.color} size={13} />
                         <span>{st.name}</span>
                         {issue.stateId === st.id && (
-                          <Check className="ml-auto h-3 w-3 text-indigo-400" />
+                          <Check className="ml-auto h-3.5 w-3.5 text-[#3e63dd]" />
                         )}
                       </DropdownMenuItem>
                     ))}
@@ -254,7 +248,7 @@ export function IssueListView({
               {/* Inline Assignee */}
               <div onClick={(e) => e.stopPropagation()}>
                 <DropdownMenu>
-                  <DropdownMenuTrigger className="flex items-center gap-1.5 rounded px-2 py-1 hover:bg-zinc-800 transition-colors cursor-pointer outline-none">
+                  <DropdownMenuTrigger className="flex items-center gap-1.5 rounded px-2 py-1 hover:bg-[#f3f4f6] transition-colors cursor-pointer outline-none">
                     {issue.assignees && issue.assignees.length > 0 ? (
                       <div className="flex items-center gap-1.5">
                         <Avatar className="h-4 w-4">
@@ -264,16 +258,16 @@ export function IssueListView({
                               alt={issue.assignees[0].user.name}
                             />
                           )}
-                          <AvatarFallback className="text-[9px]">
+                          <AvatarFallback className="text-[9px] bg-[#f3f4f6] text-[#374151]">
                             {issue.assignees[0].user.name.substring(0, 1)}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="truncate text-zinc-300">
+                        <span className="truncate text-[#374151]">
                           {issue.assignees[0].user.name}
                         </span>
                       </div>
                     ) : (
-                      <span className="text-zinc-500">Unassigned</span>
+                      <span className="text-[#9ca3af]">Unassigned</span>
                     )}
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">
@@ -312,13 +306,13 @@ export function IssueListView({
                             {user.avatarUrl && (
                               <AvatarImage src={user.avatarUrl} alt={user.name} />
                             )}
-                            <AvatarFallback className="text-[9px]">
+                            <AvatarFallback className="text-[9px] bg-[#f3f4f6] text-[#374151]">
                               {user.name.substring(0, 1)}
                             </AvatarFallback>
                           </Avatar>
                           <span>{user.name}</span>
                           {isAssigned && (
-                            <Check className="ml-auto h-3 w-3 text-indigo-400" />
+                            <Check className="ml-auto h-3.5 w-3.5 text-[#3e63dd]" />
                           )}
                         </DropdownMenuItem>
                       );
@@ -328,12 +322,21 @@ export function IssueListView({
               </div>
 
               {/* Due Date */}
-              <div className="text-zinc-400 truncate">
-                {issue.dueDate ? formatDate(issue.dueDate) : "-"}
+              <div className="truncate" onClick={(e) => e.stopPropagation()}>
+                <DatePicker
+                  size="sm"
+                  value={issue.dueDate}
+                  onChange={(d) =>
+                    updateIssueMutation.mutate({
+                      issueId: issue.id,
+                      data: { dueDate: d },
+                    })
+                  }
+                />
               </div>
 
               {/* Estimate Points */}
-              <div className="text-right font-mono text-zinc-400">
+              <div className="text-right font-mono text-[#6b7280] text-xs">
                 {issue.estimate ?? "-"}
               </div>
             </div>
@@ -341,7 +344,7 @@ export function IssueListView({
         })}
 
         {issues.length === 0 && (
-          <div className="flex flex-col items-center justify-center p-12 text-zinc-500 text-sm">
+          <div className="flex flex-col items-center justify-center p-12 text-[#6b7280] text-xs">
             <span>No issues found matching your filters</span>
           </div>
         )}
@@ -349,31 +352,30 @@ export function IssueListView({
 
       {/* Floating Multi-Select Batch Action Bar */}
       {selectedIds.length > 0 && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 rounded-xl border border-zinc-700 bg-[#16161a]/95 px-4 py-2.5 shadow-2xl backdrop-blur-md z-40 animate-in fade-in-0 slide-in-from-bottom-2">
-          <span className="text-xs font-semibold text-zinc-200">
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 rounded-lg border border-[#e5e7eb] bg-white px-4 py-2 shadow-2xl z-40 animate-in fade-in-0 slide-in-from-bottom-2 text-[#111827]">
+          <span className="text-xs font-semibold text-[#111827]">
             {selectedIds.length} {selectedIds.length === 1 ? "issue" : "issues"} selected
           </span>
 
-          <div className="h-4 w-px bg-zinc-700" />
+          <div className="h-4 w-px bg-[#e5e7eb]" />
 
           {/* Batch State change */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="secondary" size="sm">
-                Set State
+              <Button size="sm" variant="secondary" className="h-7 text-xs bg-[#f3f4f6] text-[#111827] border border-[#e5e7eb]">
+                Change State
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="center">
+            <DropdownMenuContent>
               {states.map((st) => (
                 <DropdownMenuItem
                   key={st.id}
-                  onClick={() => batchUpdateMutation.mutate({ data: { stateId: st.id } })}
+                  onClick={() =>
+                    batchUpdateMutation.mutate({ data: { stateId: st.id } })
+                  }
                   className="flex items-center gap-2"
                 >
-                  <span
-                    className="h-2 w-2 rounded-full"
-                    style={{ backgroundColor: st.color }}
-                  />
+                  <StateIcon group={st.group} color={st.color} size={13} />
                   <span>{st.name}</span>
                 </DropdownMenuItem>
               ))}
@@ -383,49 +385,33 @@ export function IssueListView({
           {/* Batch Priority change */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="secondary" size="sm">
-                Set Priority
+              <Button size="sm" variant="secondary" className="h-7 text-xs bg-[#f3f4f6] text-[#111827] border border-[#e5e7eb]">
+                Change Priority
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="center">
-              {Object.values(IssuePriority).map((prio) => {
-                const meta = getPriorityMeta(prio);
-                return (
-                  <DropdownMenuItem
-                    key={prio}
-                    onClick={() =>
-                      batchUpdateMutation.mutate({ data: { priority: prio } })
-                    }
-                    className="flex items-center gap-2"
-                  >
-                    <span className={cn("h-2 w-2 rounded-full", meta.dot)} />
-                    <span>{meta.label}</span>
-                  </DropdownMenuItem>
-                );
-              })}
+            <DropdownMenuContent>
+              {(Object.values(IssuePriority) as IssuePriority[]).map((prio) => (
+                <DropdownMenuItem
+                  key={prio}
+                  onClick={() =>
+                    batchUpdateMutation.mutate({ data: { priority: prio } })
+                  }
+                  className="flex items-center gap-2"
+                >
+                  <PriorityIcon priority={prio} size={14} />
+                  <span className="capitalize">{prio.toLowerCase()}</span>
+                </DropdownMenuItem>
+              ))}
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Batch Archive */}
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => batchUpdateMutation.mutate({ data: { isArchived: true } })}
-            className="flex items-center gap-1"
-          >
-            <Archive className="h-3 w-3" />
-            Archive
-          </Button>
-
-          {/* Deselect */}
-          <Button
-            variant="ghost"
-            size="sm"
+          {/* Deselect All */}
+          <button
             onClick={() => setSelectedIds([])}
-            className="text-xs"
+            className="text-xs text-[#6b7280] hover:text-[#111827] underline cursor-pointer ml-1"
           >
-            Clear
-          </Button>
+            Clear selection
+          </button>
         </div>
       )}
     </div>

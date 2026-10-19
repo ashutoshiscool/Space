@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireProjectMember } from "@/lib/auth";
-import { IssuePriority, Prisma, WorkspaceRole } from "@prisma/client";
+import { IssuePriority, WorkspaceRole } from "@/lib/types";
+import type { Prisma } from ".prisma/client";
 import { z } from "zod";
 import { formatZodError } from "@/lib/utils";
+import {
+  dispatchEventNotification,
+  extractMentionedUserIds,
+} from "@/lib/event-notifications";
 
 const createIssueSchema = z.object({
   title: z.string().min(1, "Title is required").max(300),
@@ -138,7 +143,7 @@ export async function POST(
   try {
     const { projectId } = await params;
     // Enforce role: Members, Admins, and Owners can create issues (Guests blocked)
-    const { user, project } = await requireProjectMember(projectId, [
+    const { user, project, workspace } = await requireProjectMember(projectId, [
       WorkspaceRole.MEMBER,
       WorkspaceRole.ADMIN,
       WorkspaceRole.OWNER,
@@ -156,7 +161,7 @@ export async function POST(
     }
 
     // Atomic transaction for sequenceId generation and relations
-    const issue = await prisma.$transaction(async (tx) => {
+    const issue = await prisma.$transaction(async (tx: any) => {
       // Exclusively lock the parent Project row to serialize sequenceId generation under concurrency
       await tx.$executeRaw`SELECT id FROM "Project" WHERE id = ${projectId} FOR UPDATE`;
 
@@ -233,6 +238,59 @@ export async function POST(
 
       return created;
     });
+
+    // Extract any mentions in issue description
+    const mentionedUserIds = await extractMentionedUserIds(
+      data.description || "",
+      projectId
+    );
+
+    // Dispatch Space event notifications (email + in-app)
+    dispatchEventNotification({
+      type: "ISSUE_CREATED",
+      workspaceSlug: workspace?.slug || project.workspaceId,
+      projectId: project.id,
+      projectIdentifier: project.identifier,
+      projectName: project.name,
+      issueId: issue.id,
+      sequenceId: issue.sequenceId,
+      issueTitle: issue.title,
+      issueDescription: issue.description,
+      actor: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+      },
+      details: {
+        assignedUserIds: data.assigneeIds,
+        mentionedUserIds,
+      },
+    }).catch((err) =>
+      console.error("[Notifications] Issue creation dispatch error:", err)
+    );
+
+    if (data.assigneeIds.length > 0) {
+      dispatchEventNotification({
+        type: "ISSUE_ASSIGNED",
+        workspaceSlug: workspace?.slug || project.workspaceId,
+        projectId: project.id,
+        projectIdentifier: project.identifier,
+        projectName: project.name,
+        issueId: issue.id,
+        sequenceId: issue.sequenceId,
+        issueTitle: issue.title,
+        actor: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+        },
+        details: {
+          assignedUserIds: data.assigneeIds,
+        },
+      }).catch((err) =>
+        console.error("[Notifications] Issue assign dispatch error:", err)
+      );
+    }
 
     return NextResponse.json({ issue });
   } catch (err: unknown) {

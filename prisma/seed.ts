@@ -369,7 +369,7 @@ async function main() {
       projectId: project.id,
       userId: user1.id,
       title: "Space Architecture & Engineering Principles",
-      content: `<h1>Space Engineering Handbook</h1><p>Welcome to Space. Our core philosophy combines the extreme speed of <strong>Linear</strong>, the open issue depth of <strong>Plane</strong>, and the flexible knowledge bases of <strong>Notion</strong>.</p><h2>Key Pillars</h2><ul><li><strong>Sub-100ms Interactions:</strong> Every button click, keyboard shortcut, and state change renders optimistically.</li><li><strong>Command-First UX:</strong> Hit <code>Cmd+K</code> or <code>Ctrl+K</code> anytime. Press <code>C</code> anywhere to draft an issue.</li><li><strong>Relational Depth:</strong> Sprints (Cycles), Initiatives (Modules), bidirectional issue dependencies, and nested rich documentation.</li></ul>`,
+      content: `<h1>Space Engineering Handbook</h1><p>Welcome to Space. Our core philosophy combines extreme speed, modern issue tracking depth, and flexible knowledge bases.</p><h2>Key Pillars</h2><ul><li><strong>Sub-100ms Interactions:</strong> Every button click, keyboard shortcut, and state change renders optimistically.</li><li><strong>Command-First UX:</strong> Hit <code>Cmd+K</code> or <code>Ctrl+K</code> anytime. Press <code>C</code> anywhere to draft an issue.</li><li><strong>Relational Depth:</strong> Sprints (Cycles), Initiatives (Modules), bidirectional issue dependencies, and nested rich documentation.</li></ul>`,
       isPublic: true,
     },
   });

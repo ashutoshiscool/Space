@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Space — High-Velocity Issue Tracking & Project Management",
   description:
-    "Next-generation, open-source project management platform combining the speed of Linear, depth of Plane, and flexibility of Notion.",
+    "Next-generation, open-source project management platform combining extreme speed, depth, and flexibility.",
 };
 
 export default function RootLayout({
@@ -27,9 +27,10 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
+      data-theme="light"
+      className={`${geistSans.variable} ${geistMono.variable} light h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[#09090b] text-zinc-100">
+      <body className="min-h-full flex flex-col bg-[#ffffff] text-[#111827]">
         <Providers>{children}</Providers>
       </body>
     </html>

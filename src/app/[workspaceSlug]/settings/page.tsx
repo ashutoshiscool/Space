@@ -34,7 +34,7 @@ export default async function WorkspaceSettingsPage({
   }
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#09090b]">
+    <div className="flex-1 overflow-y-auto bg-[#ffffff]">
       <WorkspaceSettingsClient
         workspace={workspace as unknown as WorkspaceWithDetails}
         currentUser={user}

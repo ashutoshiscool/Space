@@ -7,7 +7,10 @@ import { IssueWithDetails, ProjectWithDetails } from "@/lib/types";
 import { State } from "@prisma/client";
 import { KanbanBoard } from "@/components/kanban/KanbanBoard";
 import { IssueListView } from "@/components/list/IssueListView";
+import { CalendarView } from "@/components/calendar/CalendarView";
+import { SpreadsheetView } from "@/components/spreadsheet/SpreadsheetView";
 import { RoadmapView } from "@/components/roadmap/RoadmapView";
+import { JobBoardView } from "@/components/board/JobBoardView";
 import { Inbox, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -93,18 +96,18 @@ export function IssuesPageClient({
 
   if (allIssues.length === 0) {
     return (
-      <div className="flex h-full w-full flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-800 p-12 text-center">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-zinc-900 border border-zinc-800 text-indigo-400 mb-4 shadow-sm">
+      <div className="flex h-full w-full flex-col items-center justify-center rounded-2xl border border-dashed border-[#e5e7eb] bg-white p-12 text-center shadow-xs">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#eff6ff] border border-blue-100 text-[#3e63dd] mb-4 shadow-xs">
           <Inbox className="h-6 w-6" />
         </div>
-        <h3 className="text-base font-semibold text-zinc-100">No issues yet</h3>
-        <p className="mt-1 text-xs text-zinc-400 max-w-sm leading-relaxed">
+        <h3 className="text-base font-semibold text-[#111827]">No issues yet</h3>
+        <p className="mt-1 text-xs text-[#6b7280] max-w-sm leading-relaxed">
           Get started by creating your first issue in {project.name}. Hit{" "}
-          <kbd className="rounded bg-zinc-800 px-1 py-0.5 font-mono text-[10px]">C</kbd> anywhere or click below.
+          <kbd className="rounded bg-[#f3f4f6] border border-[#e5e7eb] px-1.5 py-0.5 font-mono text-[10px] text-[#374151]">C</kbd> anywhere or click below.
         </p>
         <Button
           onClick={() => openCreateIssue()}
-          className="mt-5 flex items-center gap-1.5"
+          className="mt-5 flex items-center gap-1.5 bg-[#3e63dd] hover:bg-[#3451b2] text-white shadow-xs"
         >
           <Plus className="h-4 w-4" />
           <span>Create first issue</span>
@@ -120,6 +123,7 @@ export function IssuesPageClient({
           states={states}
           initialIssues={filteredIssues}
           projectIdentifier={project.identifier}
+          projectMembers={project.members}
         />
       )}
 
@@ -129,6 +133,29 @@ export function IssuesPageClient({
           states={states}
           members={project.members}
           projectIdentifier={project.identifier}
+        />
+      )}
+
+      {viewMode === "jobboard" && (
+        <JobBoardView
+          issues={filteredIssues}
+          states={states}
+          project={project}
+        />
+      )}
+
+      {viewMode === "calendar" && (
+        <CalendarView
+          issues={filteredIssues}
+          project={project}
+        />
+      )}
+
+      {viewMode === "spreadsheet" && (
+        <SpreadsheetView
+          issues={filteredIssues}
+          states={states}
+          project={project}
         />
       )}
 

@@ -1,8 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { IssueWithDetails, ProjectWithDetails, ModuleWithMetrics } from "@/lib/types";
-import { Module } from "@prisma/client";
+import {
+  IssueWithDetails,
+  ProjectWithDetails,
+  ModuleWithMetrics,
+  Module,
+} from "@/lib/types";
 import { useSpaceStore } from "@/lib/store";
 import { formatDate, cn } from "@/lib/utils";
 import { Calendar, Layers } from "lucide-react";
@@ -37,7 +41,7 @@ export function RoadmapView({ issues, modules, project }: RoadmapViewProps) {
   });
 
   return (
-    <div className="flex flex-col space-y-4 w-full">
+    <div className="flex flex-col space-y-4 w-full text-[#111827]">
       {/* Roadmap Controls Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -45,6 +49,7 @@ export function RoadmapView({ issues, modules, project }: RoadmapViewProps) {
             variant={viewType === "issues" ? "default" : "secondary"}
             size="sm"
             onClick={() => setViewType("issues")}
+            className={viewType === "issues" ? "bg-[#3e63dd] hover:bg-[#3451b2] text-white shadow-xs" : "bg-[#f3f4f6] text-[#111827] border border-[#e5e7eb]"}
           >
             Issues Roadmap
           </Button>
@@ -52,12 +57,13 @@ export function RoadmapView({ issues, modules, project }: RoadmapViewProps) {
             variant={viewType === "modules" ? "default" : "secondary"}
             size="sm"
             onClick={() => setViewType("modules")}
+            className={viewType === "modules" ? "bg-[#3e63dd] hover:bg-[#3451b2] text-white shadow-xs" : "bg-[#f3f4f6] text-[#111827] border border-[#e5e7eb]"}
           >
             Initiatives Roadmap
           </Button>
         </div>
 
-        <div className="flex items-center gap-2 text-xs text-zinc-400">
+        <div className="flex items-center gap-2 text-xs text-[#6b7280]">
           <Calendar className="h-3.5 w-3.5" />
           <span>
             {formatDate(timelineStart)} - {formatDate(timelineEnd)}
@@ -66,10 +72,10 @@ export function RoadmapView({ issues, modules, project }: RoadmapViewProps) {
       </div>
 
       {/* Gantt Timeline Container */}
-      <div className="relative overflow-x-auto rounded-xl border border-zinc-800/80 bg-[#121215] shadow-sm">
+      <div className="relative overflow-x-auto rounded-xl border border-[#e5e7eb] bg-white shadow-xs">
         {/* Days Header */}
-        <div className="flex border-b border-zinc-800 bg-[#151519] min-w-[900px]">
-          <div className="w-64 shrink-0 px-4 py-2 text-xs font-semibold text-zinc-400 border-r border-zinc-800">
+        <div className="flex border-b border-[#e5e7eb] bg-[#f8f9fa] min-w-[900px]">
+          <div className="w-64 shrink-0 px-4 py-2 text-xs font-semibold text-[#6b7280] border-r border-[#e5e7eb]">
             {viewType === "issues" ? "Issue" : "Initiative"}
           </div>
 
@@ -78,8 +84,8 @@ export function RoadmapView({ issues, modules, project }: RoadmapViewProps) {
               <div
                 key={i}
                 className={cn(
-                  "flex-1 border-r border-zinc-800/50 py-1.5 text-center text-[10px]",
-                  d.isToday ? "bg-indigo-950/30 text-indigo-400 font-bold" : "text-zinc-500"
+                  "flex-1 border-r border-[#e5e7eb] py-1.5 text-center text-[10px]",
+                  d.isToday ? "bg-[#eff6ff] text-[#3e63dd] font-bold" : "text-[#6b7280]"
                 )}
               >
                 <div>{d.label}</div>
@@ -90,7 +96,7 @@ export function RoadmapView({ issues, modules, project }: RoadmapViewProps) {
         </div>
 
         {/* Timeline Items */}
-        <div className="divide-y divide-zinc-800/50 min-w-[900px]">
+        <div className="divide-y divide-[#f1f3f5] min-w-[900px]">
           {viewType === "issues"
             ? issues.map((issue) => {
                 const startDate = issue.startDate
@@ -122,20 +128,20 @@ export function RoadmapView({ issues, modules, project }: RoadmapViewProps) {
                   <div
                     key={issue.id}
                     onClick={() => setActiveIssueId(issue.id)}
-                    className="flex items-center hover:bg-zinc-800/30 transition-colors cursor-pointer group py-2"
+                    className="flex items-center hover:bg-[#f8f9fa] transition-colors cursor-pointer group py-2"
                   >
-                    <div className="w-64 shrink-0 px-4 flex items-center gap-2 border-r border-zinc-800 truncate">
-                      <span className="font-mono text-xs text-zinc-400">
+                    <div className="w-64 shrink-0 px-4 flex items-center gap-2 border-r border-[#e5e7eb] truncate">
+                      <span className="font-mono text-xs text-[#6b7280]">
                         {project.identifier}-{issue.sequenceId}
                       </span>
-                      <span className="text-xs font-medium text-zinc-200 truncate">
+                      <span className="text-xs font-medium text-[#111827] truncate group-hover:text-[#3e63dd]">
                         {issue.title}
                       </span>
                     </div>
 
                     <div className="relative flex-1 h-7">
                       <div
-                        className="absolute h-6 rounded-md px-2 flex items-center text-[11px] font-medium text-white shadow-sm transition-all group-hover:brightness-110"
+                        className="absolute h-6 rounded-md px-2 flex items-center text-[11px] font-medium text-white shadow-xs transition-all group-hover:brightness-105"
                         style={{
                           left: `${leftPercent}%`,
                           width: `${widthPercent}%`,
@@ -177,18 +183,18 @@ export function RoadmapView({ issues, modules, project }: RoadmapViewProps) {
                 return (
                   <div
                     key={mod.id}
-                    className="flex items-center hover:bg-zinc-800/30 transition-colors py-2"
+                    className="flex items-center hover:bg-[#f8f9fa] transition-colors py-2"
                   >
-                    <div className="w-64 shrink-0 px-4 flex items-center gap-2 border-r border-zinc-800 truncate">
-                      <Layers className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
-                      <span className="text-xs font-medium text-zinc-200 truncate">
+                    <div className="w-64 shrink-0 px-4 flex items-center gap-2 border-r border-[#e5e7eb] truncate">
+                      <Layers className="h-3.5 w-3.5 text-[#3e63dd] shrink-0" />
+                      <span className="text-xs font-medium text-[#111827] truncate">
                         {mod.name}
                       </span>
                     </div>
 
                     <div className="relative flex-1 h-7">
                       <div
-                        className="absolute h-6 rounded-md px-2.5 flex items-center justify-between text-[11px] font-medium text-white bg-indigo-600 shadow-sm"
+                        className="absolute h-6 rounded-md px-2.5 flex items-center justify-between text-[11px] font-medium text-white bg-[#3e63dd] shadow-xs"
                         style={{
                           left: `${leftPercent}%`,
                           width: `${widthPercent}%`,
@@ -196,7 +202,7 @@ export function RoadmapView({ issues, modules, project }: RoadmapViewProps) {
                       >
                         <span className="truncate">{mod.name}</span>
                         {"progressPercent" in mod && (
-                          <span className="text-[10px] opacity-80">
+                          <span className="text-[10px] opacity-90">
                             {(mod as ModuleWithMetrics).progressPercent}%
                           </span>
                         )}

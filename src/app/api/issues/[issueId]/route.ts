@@ -4,6 +4,10 @@ import { requireIssueAccess } from "@/lib/auth";
 import { IssuePriority, WorkspaceRole, Prisma } from "@prisma/client";
 import { z } from "zod";
 import { formatZodError } from "@/lib/utils";
+import {
+  dispatchEventNotification,
+  extractMentionedUserIds,
+} from "@/lib/event-notifications";
 
 const updateIssueSchema = z.object({
   title: z.string().min(1).optional(),
@@ -147,7 +151,7 @@ export async function PATCH(
   try {
     const { issueId } = await params;
     // Enforce tenant authorization and role (Guests cannot edit issues)
-    const { user, issue: current } = await requireIssueAccess(issueId, [
+    const { user, issue: current, project, workspace } = await requireIssueAccess(issueId, [
       WorkspaceRole.MEMBER,
       WorkspaceRole.ADMIN,
       WorkspaceRole.OWNER,
@@ -279,6 +283,116 @@ export async function PATCH(
       });
     });
 
+    // 1. Status transition notification
+    if (data.stateId && data.stateId !== fullCurrent.stateId) {
+      dispatchEventNotification({
+        type: "ISSUE_STATUS_CHANGED",
+        workspaceSlug: workspace?.slug || project.workspaceId,
+        projectId: project.id,
+        projectIdentifier: project.identifier,
+        projectName: project.name,
+        issueId: updated.id,
+        sequenceId: updated.sequenceId,
+        issueTitle: updated.title,
+        actor: { id: user.id, name: user.name, email: user.email },
+        details: {
+          oldState: fullCurrent.state.name,
+          newState: updated.state.name,
+        },
+      }).catch((e) => console.error("[Notifications] Status change error:", e));
+    }
+
+    // 2. Priority change notification
+    if (data.priority && data.priority !== fullCurrent.priority) {
+      dispatchEventNotification({
+        type: "ISSUE_PRIORITY_CHANGED",
+        workspaceSlug: workspace?.slug || project.workspaceId,
+        projectId: project.id,
+        projectIdentifier: project.identifier,
+        projectName: project.name,
+        issueId: updated.id,
+        sequenceId: updated.sequenceId,
+        issueTitle: updated.title,
+        actor: { id: user.id, name: user.name, email: user.email },
+        details: {
+          oldPriority: fullCurrent.priority,
+          newPriority: updated.priority,
+        },
+      }).catch((e) => console.error("[Notifications] Priority change error:", e));
+    }
+
+    // 3. Due date change notification
+    if (
+      data.dueDate !== undefined &&
+      String(data.dueDate) !== String(fullCurrent.dueDate)
+    ) {
+      dispatchEventNotification({
+        type: "ISSUE_DUE_DATE_CHANGED",
+        workspaceSlug: workspace?.slug || project.workspaceId,
+        projectId: project.id,
+        projectIdentifier: project.identifier,
+        projectName: project.name,
+        issueId: updated.id,
+        sequenceId: updated.sequenceId,
+        issueTitle: updated.title,
+        actor: { id: user.id, name: user.name, email: user.email },
+        details: {
+          dueDate: data.dueDate,
+        },
+      }).catch((e) => console.error("[Notifications] Due date change error:", e));
+    }
+
+    // 4. Assignees change notification (newly assigned users)
+    if (data.assigneeIds !== undefined) {
+      const currentIds = fullCurrent.assignees.map((a) => a.userId);
+      const newlyAssigned = data.assigneeIds.filter(
+        (id) => !currentIds.includes(id)
+      );
+      if (newlyAssigned.length > 0) {
+        dispatchEventNotification({
+          type: "ISSUE_ASSIGNED",
+          workspaceSlug: workspace?.slug || project.workspaceId,
+          projectId: project.id,
+          projectIdentifier: project.identifier,
+          projectName: project.name,
+          issueId: updated.id,
+          sequenceId: updated.sequenceId,
+          issueTitle: updated.title,
+          actor: { id: user.id, name: user.name, email: user.email },
+          details: {
+            assignedUserIds: newlyAssigned,
+          },
+        }).catch((e) =>
+          console.error("[Notifications] Assignees change error:", e)
+        );
+      }
+    }
+
+    // 5. Description mentions notification
+    if (data.description && data.description !== fullCurrent.description) {
+      extractMentionedUserIds(data.description, project.id).then(
+        (mentioned) => {
+          if (mentioned.length > 0) {
+            dispatchEventNotification({
+              type: "USER_MENTIONED",
+              workspaceSlug: workspace?.slug || project.workspaceId,
+              projectId: project.id,
+              projectIdentifier: project.identifier,
+              projectName: project.name,
+              issueId: updated.id,
+              sequenceId: updated.sequenceId,
+              issueTitle: updated.title,
+              actor: { id: user.id, name: user.name, email: user.email },
+              details: {
+                mentionedUserIds: mentioned,
+                commentContent: data.description || "",
+              },
+            }).catch((e) => console.error("[Notifications] Mentions error:", e));
+          }
+        }
+      );
+    }
+
     return NextResponse.json({ issue: updated });
   } catch (err: unknown) {
     if (err instanceof z.ZodError) {
@@ -305,7 +419,7 @@ export async function DELETE(
   try {
     const { issueId } = await params;
     // Enforce tenant authorization and role (Guests cannot archive/delete issues)
-    await requireIssueAccess(issueId, [
+    const { user, issue: current, project, workspace } = await requireIssueAccess(issueId, [
       WorkspaceRole.MEMBER,
       WorkspaceRole.ADMIN,
       WorkspaceRole.OWNER,
@@ -315,6 +429,18 @@ export async function DELETE(
       where: { id: issueId },
       data: { isArchived: true },
     });
+
+    dispatchEventNotification({
+      type: "ISSUE_DELETED",
+      workspaceSlug: workspace?.slug || project.workspaceId,
+      projectId: project.id,
+      projectIdentifier: project.identifier,
+      projectName: project.name,
+      issueId: issue.id,
+      sequenceId: issue.sequenceId,
+      issueTitle: issue.title,
+      actor: { id: user.id, name: user.name, email: user.email },
+    }).catch((e) => console.error("[Notifications] Delete error:", e));
 
     return NextResponse.json({ success: true, issue });
   } catch (err: unknown) {

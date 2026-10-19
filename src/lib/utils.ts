@@ -81,17 +81,17 @@ export function getPriorityMeta(priority: IssuePriority) {
 export function getStateGroupMeta(group: StateGroup) {
   switch (group) {
     case StateGroup.BACKLOG:
-      return { label: "Backlog", color: "text-zinc-400", bg: "bg-zinc-800" };
+      return { label: "Backlog", color: "text-[#6b7280]", bg: "bg-[#f3f4f6]" };
     case StateGroup.UNSTARTED:
-      return { label: "Unstarted", color: "text-sky-400", bg: "bg-sky-950/40" };
+      return { label: "Unstarted", color: "text-sky-600", bg: "bg-sky-50" };
     case StateGroup.STARTED:
-      return { label: "Started", color: "text-amber-400", bg: "bg-amber-950/40" };
+      return { label: "Started", color: "text-amber-600", bg: "bg-amber-50" };
     case StateGroup.COMPLETED:
-      return { label: "Completed", color: "text-emerald-400", bg: "bg-emerald-950/40" };
+      return { label: "Completed", color: "text-emerald-600", bg: "bg-emerald-50" };
     case StateGroup.CANCELED:
-      return { label: "Canceled", color: "text-rose-400", bg: "bg-rose-950/40" };
+      return { label: "Canceled", color: "text-rose-600", bg: "bg-rose-50" };
     default:
-      return { label: "Unknown", color: "text-zinc-400", bg: "bg-zinc-800" };
+      return { label: "Unknown", color: "text-[#6b7280]", bg: "bg-[#f3f4f6]" };
   }
 }
 

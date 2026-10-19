@@ -56,21 +56,21 @@ export function CycleCompleteModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4 animate-in fade-in-0"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in-0"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-md rounded-2xl border border-zinc-800 bg-[#121215] p-6 shadow-2xl text-zinc-100 space-y-5"
+        className="relative w-full max-w-md rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-2xl text-[#111827] space-y-5"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+        <div className="flex items-center justify-between border-b border-[#e5e7eb] pb-3">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-            <h3 className="text-base font-semibold">Complete {cycle.name}</h3>
+            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+            <h3 className="text-base font-semibold text-[#111827]">Complete {cycle.name}</h3>
           </div>
           <button
             onClick={onClose}
-            className="rounded p-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+            className="rounded p-1 text-[#6b7280] hover:bg-[#f3f4f6] hover:text-[#111827]"
           >
             <X className="h-4 w-4" />
           </button>
@@ -78,57 +78,57 @@ export function CycleCompleteModal({
 
         {/* Stats Summary */}
         <div className="grid grid-cols-2 gap-3 text-xs">
-          <div className="rounded-xl border border-emerald-900/40 bg-emerald-950/20 p-3 text-center">
-            <div className="text-2xl font-bold text-emerald-400">
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 text-center">
+            <div className="text-2xl font-bold text-emerald-600">
               {cycle.completedIssues}
             </div>
-            <div className="text-zinc-400">Completed issues</div>
+            <div className="text-[#6b7280] mt-0.5">Completed issues</div>
           </div>
-          <div className="rounded-xl border border-amber-900/40 bg-amber-950/20 p-3 text-center">
-            <div className="text-2xl font-bold text-amber-400">
+          <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3 text-center">
+            <div className="text-2xl font-bold text-amber-600">
               {incompleteCount}
             </div>
-            <div className="text-zinc-400">Incomplete issues</div>
+            <div className="text-[#6b7280] mt-0.5">Incomplete issues</div>
           </div>
         </div>
 
         {/* Rollover Section */}
         {incompleteCount > 0 && (
           <div className="space-y-2 text-xs">
-            <label className="font-semibold text-zinc-300">
+            <label className="font-semibold text-[#374151]">
               Move remaining {incompleteCount} open {incompleteCount === 1 ? "issue" : "issues"} to:
             </label>
             <div className="space-y-1.5">
               {upcomingCycles.map((up) => (
                 <label
                   key={up.id}
-                  className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/60 p-2.5 hover:bg-zinc-800/60 cursor-pointer"
+                  className="flex items-center gap-2.5 rounded-lg border border-[#e5e7eb] bg-[#f8f9fa] p-2.5 hover:bg-[#f1f3f5] cursor-pointer transition-colors"
                 >
                   <input
                     type="radio"
                     name="rollover"
                     checked={targetCycleId === up.id}
                     onChange={() => setTargetCycleId(up.id)}
-                    className="text-indigo-600 focus:ring-0"
+                    className="text-[#3e63dd] focus:ring-0"
                   />
                   <div className="flex flex-col">
-                    <span className="font-medium text-zinc-200">{up.name}</span>
-                    <span className="text-[10px] text-zinc-500">Next active sprint</span>
+                    <span className="font-medium text-[#111827]">{up.name}</span>
+                    <span className="text-[10px] text-[#6b7280]">Next active sprint</span>
                   </div>
                 </label>
               ))}
 
-              <label className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/60 p-2.5 hover:bg-zinc-800/60 cursor-pointer">
+              <label className="flex items-center gap-2.5 rounded-lg border border-[#e5e7eb] bg-[#f8f9fa] p-2.5 hover:bg-[#f1f3f5] cursor-pointer transition-colors">
                 <input
                   type="radio"
                   name="rollover"
                   checked={targetCycleId === null}
                   onChange={() => setTargetCycleId(null)}
-                  className="text-indigo-600 focus:ring-0"
+                  className="text-[#3e63dd] focus:ring-0"
                 />
                 <div className="flex flex-col">
-                  <span className="font-medium text-zinc-200">Product Backlog</span>
-                  <span className="text-[10px] text-zinc-500">Remove cycle assignment</span>
+                  <span className="font-medium text-[#111827]">Product Backlog</span>
+                  <span className="text-[10px] text-[#6b7280]">Remove cycle assignment</span>
                 </div>
               </label>
             </div>
@@ -136,15 +136,15 @@ export function CycleCompleteModal({
         )}
 
         {/* Action Buttons */}
-        <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-800">
-          <Button variant="ghost" size="sm" onClick={onClose}>
+        <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#e5e7eb]">
+          <Button variant="outline" size="sm" onClick={onClose} className="border-[#e5e7eb] text-[#4b5563] hover:bg-[#f3f4f6]">
             Cancel
           </Button>
           <Button
             size="sm"
             onClick={() => completeCycleMutation.mutate()}
             disabled={completeCycleMutation.isPending}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white"
+            className="bg-[#3e63dd] hover:bg-[#3451b2] text-white shadow-xs"
           >
             {completeCycleMutation.isPending ? "Completing..." : "Complete Sprint"}
           </Button>

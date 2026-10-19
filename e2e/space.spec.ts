@@ -175,4 +175,69 @@ test.describe("Space End-to-End Browser Workflows", () => {
     // Verify redirected into workspace
     await page.waitForURL("**/acme-corp**", { timeout: 15000 });
   });
+
+  test("8. Advanced Features: Calendar, Spreadsheet, Views, Analytics & Stickies", async ({ page }) => {
+    // 1. Log in with admin user
+    await page.goto("/login");
+    await page.fill('input[type="email"]', "sarah@space.dev");
+    await page.fill('input[type="password"]', "password123");
+    await page.click('button[type="submit"]');
+    await page.waitForURL("**/acme-corp/SPC/issues", { timeout: 15000 });
+
+    // 2. Test Layout Switcher: Calendar View
+    const calendarBtn = page.locator('button:has-text("Calendar")');
+    await expect(calendarBtn).toBeVisible({ timeout: 10000 });
+    await calendarBtn.click();
+    await expect(page.locator("text=Today")).toBeVisible({ timeout: 5000 });
+
+    // 3. Test Layout Switcher: Spreadsheet View
+    const spreadsheetBtn = page.locator('button:has-text("Spreadsheet")');
+    await expect(spreadsheetBtn).toBeVisible({ timeout: 10000 });
+    await spreadsheetBtn.click();
+    await expect(page.locator("text=Add new row").first()).toBeVisible({ timeout: 5000 });
+
+    // 4. Test Views Page
+    const viewsLink = page.locator('a:has-text("Views")');
+    await expect(viewsLink).toBeVisible();
+    await viewsLink.click();
+    await page.waitForURL("**/acme-corp/SPC/views", { timeout: 10000 });
+    await expect(page.locator("h1:has-text('Views')")).toBeVisible();
+    await expect(page.locator("text=All Open Issues")).toBeVisible();
+    await expect(page.locator("text=Urgent & High Priority")).toBeVisible();
+
+    // 5. Test Analytics Page
+    const analyticsLink = page.locator('a:has-text("Analytics")');
+    await expect(analyticsLink).toBeVisible();
+    await analyticsLink.click();
+    await page.waitForURL("**/acme-corp/SPC/analytics", { timeout: 10000 });
+    await expect(page.locator("text=Total Issues").first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("text=State Distribution").first()).toBeVisible();
+
+    // 6. Test Stickies Widget
+    const stickiesBtn = page.locator('button[title="Open Stickies Scratchpad"]');
+    await expect(stickiesBtn).toBeVisible();
+    await stickiesBtn.click();
+    await expect(page.locator("text=Stickies Scratchpad")).toBeVisible({ timeout: 5000 });
+    await expect(page.locator("text=New Note")).toBeVisible();
+    await page.locator('button[title="Close Stickies"]').click();
+    await expect(page.locator("text=Stickies Scratchpad")).not.toBeVisible({ timeout: 5000 });
+
+    // 7. Test "Your Work" Route
+    await page.goto("/acme-corp/your-work");
+    await expect(page.locator("text=Your Work").first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("text=Assigned").first()).toBeVisible();
+
+    // 8. Test "Drafts" Route
+    await page.goto("/acme-corp/drafts");
+    await expect(page.locator("h1:has-text('Drafts')")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("text=New Draft")).toBeVisible();
+
+    // 9. Test "Archives" Route
+    await page.goto("/acme-corp/SPC/archives");
+    await expect(page.locator("h1:has-text('Archived Issues')")).toBeVisible({ timeout: 10000 });
+
+    // 10. Test Export CSV Button on Issues Board
+    await page.goto("/acme-corp/SPC/issues");
+    await expect(page.locator('button:has-text("Export CSV")')).toBeVisible({ timeout: 10000 });
+  });
 });

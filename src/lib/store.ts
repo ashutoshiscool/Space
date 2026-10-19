@@ -22,8 +22,16 @@ interface SpaceStore {
     stateId?: string;
     cycleId?: string;
     moduleId?: string;
+    assigneeId?: string;
+    dueDate?: string;
   };
-  openCreateIssue: (defaults?: { stateId?: string; cycleId?: string; moduleId?: string }) => void;
+  openCreateIssue: (defaults?: {
+    stateId?: string;
+    cycleId?: string;
+    moduleId?: string;
+    assigneeId?: string;
+    dueDate?: string;
+  }) => void;
   closeCreateIssue: () => void;
 
   // Active Issue Detail Modal/Drawer
@@ -40,9 +48,14 @@ interface SpaceStore {
   setModuleFilter: (moduleId?: string) => void;
   clearFilters: () => void;
 
-  // Layout View Mode
-  viewMode: "kanban" | "list" | "roadmap";
-  setViewMode: (mode: "kanban" | "list" | "roadmap") => void;
+  // Layout View Mode (Board, List, Calendar, Spreadsheet, Roadmap, Job Board)
+  viewMode: "kanban" | "list" | "calendar" | "spreadsheet" | "roadmap" | "jobboard";
+  setViewMode: (mode: "kanban" | "list" | "calendar" | "spreadsheet" | "roadmap" | "jobboard") => void;
+
+  // Stickies (Scratchpad)
+  isStickiesOpen: boolean;
+  setStickiesOpen: (open: boolean) => void;
+  toggleStickies: () => void;
 
   // Sidebar
   isSidebarCollapsed: boolean;
@@ -123,6 +136,10 @@ export const useSpaceStore = create<SpaceStore>((set) => ({
 
   viewMode: "kanban",
   setViewMode: (mode) => set({ viewMode: mode }),
+
+  isStickiesOpen: false,
+  setStickiesOpen: (open) => set({ isStickiesOpen: open }),
+  toggleStickies: () => set((state) => ({ isStickiesOpen: !state.isStickiesOpen })),
 
   isSidebarCollapsed: false,
   toggleSidebar: () =>

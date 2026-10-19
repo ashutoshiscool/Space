@@ -13,6 +13,31 @@ services:
       POSTGRES_DB: spacedb
     volumes:
       - space_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d spacedb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: space-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/spacedb?schema=public
+      JWT_SECRET: ${JWT_SECRET:-space_production_super_secret_jwt_key_987654321}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - space_data:/app/data
 
 volumes:
   space_pgdata:
+  space_data:

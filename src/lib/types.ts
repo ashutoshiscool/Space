@@ -14,9 +14,10 @@ import {
   IssueComment,
   IssueActivity,
   Page,
-} from "@prisma/client";
+  Notification,
+} from ".prisma/client";
 
-export type { User, Project, Workspace, State, Label, Cycle, Module, Page };
+export type { User, Project, Workspace, State, Label, Cycle, Module, Page, Notification };
 export { WorkspaceRole, IssuePriority, StateGroup, RelationType };
 
 export type IssueWithDetails = Issue & {

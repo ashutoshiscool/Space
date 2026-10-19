@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Page } from "@prisma/client";
+import { Page } from "@/lib/types";
 import { TipTapEditor } from "@/components/editor/TipTapEditor";
 import { Button } from "@/components/ui/button";
 import { Globe, Lock, Share2, Check, ArrowLeft, Trash2 } from "lucide-react";
@@ -63,14 +63,14 @@ export function NotionPageEditor({ page, isReadOnly = false }: NotionPageEditorP
   return (
     <div className="flex flex-col w-full max-w-4xl mx-auto space-y-6 pb-20">
       {/* Top Action Bar */}
-      <div className="flex items-center justify-between border-b border-zinc-800/80 pb-4">
+      <div className="flex items-center justify-between border-b border-[#e5e7eb] pb-4">
         <button
           onClick={() =>
             router.push(
               `/${page.project.workspace.slug}/${page.project.identifier}/pages`
             )
           }
-          className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 text-xs text-[#6b7280] hover:text-[#111827] transition-colors cursor-pointer"
         >
           <ArrowLeft className="h-4 w-4" />
           <span>All Documents</span>
@@ -87,7 +87,9 @@ export function NotionPageEditor({ page, isReadOnly = false }: NotionPageEditorP
                 setIsPublic(newPublic);
                 updatePageMutation.mutate({ isPublic: newPublic });
               }}
-              className="flex items-center gap-1.5 text-xs"
+              className={`flex items-center gap-1.5 text-xs ${
+                isPublic ? "bg-[#3e63dd] hover:bg-[#3451b2] text-white shadow-xs" : "border-[#e5e7eb] text-[#374151] hover:bg-[#f3f4f6]"
+              }`}
             >
               {isPublic ? (
                 <>
@@ -107,9 +109,9 @@ export function NotionPageEditor({ page, isReadOnly = false }: NotionPageEditorP
                 variant="outline"
                 size="sm"
                 onClick={handleCopyLink}
-                className="flex items-center gap-1.5 text-xs"
+                className="flex items-center gap-1.5 text-xs border-[#e5e7eb] text-[#374151] hover:bg-[#f3f4f6]"
               >
-                {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Share2 className="h-3.5 w-3.5" />}
+                {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Share2 className="h-3.5 w-3.5" />}
                 <span>{copied ? "Copied" : "Share"}</span>
               </Button>
             )}
@@ -122,7 +124,7 @@ export function NotionPageEditor({ page, isReadOnly = false }: NotionPageEditorP
                   deletePageMutation.mutate();
                 }
               }}
-              className="text-rose-400 hover:bg-rose-950/30"
+              className="text-rose-600 hover:bg-rose-50"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
@@ -143,9 +145,9 @@ export function NotionPageEditor({ page, isReadOnly = false }: NotionPageEditorP
             }
           }}
           placeholder="Untitled Page"
-          className="w-full bg-transparent text-3xl font-extrabold tracking-tight text-zinc-100 placeholder:text-zinc-600 focus:outline-none"
+          className="w-full bg-transparent text-3xl font-extrabold tracking-tight text-[#111827] placeholder:text-[#9ca3af] focus:outline-none"
         />
-        <div className="text-xs text-zinc-500 mt-2">
+        <div className="text-xs text-[#6b7280] mt-2">
           Authored by {page.user.name}
         </div>
       </div>

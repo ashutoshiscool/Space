@@ -88,3 +88,40 @@ export async function POST(
     return NextResponse.json({ error: "Failed to create relation" }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ issueId: string }> }
+) {
+  try {
+    const { issueId } = await params;
+    await requireIssueAccess(issueId, [
+      WorkspaceRole.MEMBER,
+      WorkspaceRole.ADMIN,
+      WorkspaceRole.OWNER,
+    ]);
+
+    const { searchParams } = new URL(req.url);
+    const relationId = searchParams.get("relationId");
+
+    if (!relationId) {
+      return NextResponse.json({ error: "relationId is required" }, { status: 400 });
+    }
+
+    await prisma.issueRelation.delete({
+      where: { id: relationId },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Error";
+    if (msg === "UNAUTHORIZED") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (msg === "FORBIDDEN_ISSUE_ACCESS" || msg === "INSUFFICIENT_PERMISSIONS") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    return NextResponse.json({ error: "Failed to delete relation" }, { status: 500 });
+  }
+}
+

@@ -4,6 +4,10 @@ import { requireIssueAccess } from "@/lib/auth";
 import { WorkspaceRole } from "@prisma/client";
 import { z } from "zod";
 import { formatZodError } from "@/lib/utils";
+import {
+  dispatchEventNotification,
+  extractMentionedUserIds,
+} from "@/lib/event-notifications";
 
 const commentSchema = z.object({
   content: z.string().min(1, "Comment content cannot be empty").max(5000),
@@ -16,7 +20,7 @@ export async function POST(
   try {
     const { issueId } = await params;
     // Enforce tenant authorization and role (Members, Admins, Owners only)
-    const { user, issue } = await requireIssueAccess(issueId, [
+    const { user, issue, project, workspace } = await requireIssueAccess(issueId, [
       WorkspaceRole.MEMBER,
       WorkspaceRole.ADMIN,
       WorkspaceRole.OWNER,
@@ -30,6 +34,7 @@ export async function POST(
       include: {
         project: true,
         assignees: true,
+        createdBy: true,
       },
     });
 
@@ -76,6 +81,60 @@ export async function POST(
 
       return c;
     });
+
+    // Extract user mentions in comment
+    const mentionedUserIds = await extractMentionedUserIds(
+      content,
+      fullIssue.projectId
+    );
+
+    // Dispatch Space comment event notification (email + in-app)
+    dispatchEventNotification({
+      type: "ISSUE_COMMENT_ADDED",
+      workspaceSlug: workspace?.slug || fullIssue.project.workspaceId,
+      projectId: fullIssue.projectId,
+      projectIdentifier: fullIssue.project.identifier,
+      projectName: fullIssue.project.name,
+      issueId: fullIssue.id,
+      sequenceId: fullIssue.sequenceId,
+      issueTitle: fullIssue.title,
+      actor: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+      },
+      details: {
+        commentContent: content,
+        mentionedUserIds,
+      },
+    }).catch((err) =>
+      console.error("[Notifications] Comment dispatch error:", err)
+    );
+
+    // If users were directly @mentioned, dispatch USER_MENTIONED notification
+    if (mentionedUserIds.length > 0) {
+      dispatchEventNotification({
+        type: "USER_MENTIONED",
+        workspaceSlug: workspace?.slug || fullIssue.project.workspaceId,
+        projectId: fullIssue.projectId,
+        projectIdentifier: fullIssue.project.identifier,
+        projectName: fullIssue.project.name,
+        issueId: fullIssue.id,
+        sequenceId: fullIssue.sequenceId,
+        issueTitle: fullIssue.title,
+        actor: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+        },
+        details: {
+          commentContent: content,
+          mentionedUserIds,
+        },
+      }).catch((err) =>
+        console.error("[Notifications] Mention dispatch error:", err)
+      );
+    }
 
     return NextResponse.json({ comment });
   } catch (err: unknown) {

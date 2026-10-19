@@ -15,7 +15,7 @@ import {
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { State } from "@prisma/client";
-import { IssueWithDetails } from "@/lib/types";
+import { IssueWithDetails, User } from "@/lib/types";
 import { KanbanColumn } from "./KanbanColumn";
 import { IssueCard } from "./IssueCard";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -24,12 +24,14 @@ interface KanbanBoardProps {
   states: State[];
   initialIssues: IssueWithDetails[];
   projectIdentifier: string;
+  projectMembers?: { user: Pick<User, "id" | "name" | "email" | "avatarUrl"> }[];
 }
 
 export function KanbanBoard({
   states,
   initialIssues,
   projectIdentifier,
+  projectMembers,
 }: KanbanBoardProps) {
   const [prevInitialIssues, setPrevInitialIssues] = useState<IssueWithDetails[]>(initialIssues);
   const [issues, setIssues] = useState<IssueWithDetails[]>(initialIssues);
@@ -179,6 +181,8 @@ export function KanbanBoard({
               state={state}
               issues={columnIssues}
               projectIdentifier={projectIdentifier}
+              projectMembers={projectMembers}
+              states={states}
             />
           );
         })}
@@ -189,6 +193,8 @@ export function KanbanBoard({
           <IssueCard
             issue={activeIssue}
             projectIdentifier={projectIdentifier}
+            projectMembers={projectMembers}
+            states={states}
             isOverlay
           />
         ) : null}

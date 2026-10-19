@@ -2,6 +2,7 @@ import { formatZodError } from "@/lib/utils";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { comparePassword, signSessionToken, setSessionCookie } from "@/lib/auth";
+import { isSmtpSetUp, isUserEmailVerified } from "@/lib/verification";
 import { z } from "zod";
 
 const loginSchema = z.object({
@@ -41,6 +42,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "Invalid email or password" },
         { status: 401 }
+      );
+    }
+
+    // Check if email verification is enforced and pending
+    const isSmtpReady = await isSmtpSetUp();
+    const isVerified = await isUserEmailVerified(user.id, user.email);
+
+    if (isSmtpReady && !isVerified) {
+      return NextResponse.json(
+        {
+          error: "Please verify your email address to log in",
+          requiresVerification: true,
+          email: user.email,
+        },
+        { status: 403 }
       );
     }
 

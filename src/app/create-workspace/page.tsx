@@ -70,44 +70,44 @@ export default function CreateWorkspacePage() {
   };
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-[#09090b] p-4 text-zinc-100">
-      <div className="w-full max-w-md space-y-6 rounded-2xl border border-zinc-800 bg-[#121215] p-8 shadow-2xl">
-        <div className="space-y-2 text-center">
-          <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white font-bold text-lg shadow-lg shadow-indigo-500/20 mb-2">
-            🏢
+    <div className="flex min-h-screen w-full items-center justify-center bg-[#f8f9fa] p-4 text-[#111827]">
+      <div className="w-full max-w-sm space-y-6 rounded-xl border border-[#e5e7eb] bg-white p-7 shadow-xl">
+        <div className="space-y-2 text-center flex flex-col items-center">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#f3f4f6] border border-[#e5e7eb] text-[#3e63dd] mb-1">
+            <Building2 className="h-5 w-5" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Create your Workspace</h1>
-          <p className="text-xs text-zinc-400">
-            Workspaces host your teams, projects, sprints, and documentation
+          <h1 className="text-xl font-bold tracking-tight text-[#111827]">Create your Workspace</h1>
+          <p className="text-xs text-[#6b7280]">
+            Workspaces organize your projects, cycles, and engineering docs
           </p>
         </div>
 
         {error && (
-          <div className="rounded-lg border border-red-900/60 bg-red-950/40 p-3 text-xs text-red-400">
+          <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-600">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           <div>
-            <label className="text-zinc-400 block mb-1">Workspace Name</label>
+            <label className="text-[#374151] block mb-1 font-medium">Workspace Name</label>
             <div className="relative">
-              <Building2 className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+              <Building2 className="absolute left-3 top-2.5 h-4 w-4 text-[#9ca3af]" />
               <Input
                 type="text"
                 required
                 placeholder="Acme Corp"
                 value={name}
                 onChange={(e) => handleNameChange(e.target.value)}
-                className="pl-9"
+                className="pl-9 bg-white border-[#d1d5db] text-[#111827] placeholder:text-[#9ca3af] focus:border-[#3e63dd]"
               />
             </div>
           </div>
 
           <div>
-            <label className="text-zinc-400 block mb-1">Workspace URL Slug</label>
+            <label className="text-[#374151] block mb-1 font-medium">Workspace URL Slug</label>
             <div className="relative flex items-center">
-              <span className="absolute left-3 text-xs text-zinc-500 font-mono">
+              <span className="absolute left-3 text-xs text-[#6b7280] font-mono">
                 space.dev/
               </span>
               <Input
@@ -117,15 +117,19 @@ export default function CreateWorkspacePage() {
                 placeholder="acme-corp"
                 value={slug}
                 onChange={(e) => setSlug(e.target.value.toLowerCase())}
-                className="pl-20 font-mono text-xs"
+                className="pl-20 font-mono text-xs bg-white border-[#d1d5db] text-[#111827] placeholder:text-[#9ca3af] focus:border-[#3e63dd]"
               />
             </div>
-            <span className="text-[10px] text-zinc-500 mt-1 block">
+            <span className="text-[10px] text-[#6b7280] mt-1 block">
               Only lowercase letters, numbers, and hyphens
             </span>
           </div>
 
-          <Button type="submit" disabled={loading || !name.trim() || !slug.trim()} className="w-full mt-4 font-semibold">
+          <Button
+            type="submit"
+            disabled={loading || !name.trim() || !slug.trim()}
+            className="w-full mt-4 font-semibold bg-[#3e63dd] hover:bg-[#3451b2] text-white shadow-xs"
+          >
             {loading ? "Creating workspace..." : "Launch Workspace"}
           </Button>
         </form>

@@ -5,7 +5,7 @@ import { prisma } from "./prisma";
 import { WorkspaceRole, User } from "@prisma/client";
 
 const SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "space_super_secret_jwt_key_987654321_linear_plane_notion"
+  process.env.JWT_SECRET || "space_super_secret_jwt_key_987654321_space_app"
 );
 
 const COOKIE_NAME = "space_session";
@@ -203,7 +203,13 @@ export async function requireIssueAccess(issueId: string, allowedRoles?: Workspa
     throw new Error("INSUFFICIENT_PERMISSIONS");
   }
 
-  return { user, issue, project: issue.project, role: effectiveRole };
+  return {
+    user,
+    issue,
+    project: issue.project,
+    workspace: issue.project.workspace,
+    role: effectiveRole,
+  };
 }
 
 /**

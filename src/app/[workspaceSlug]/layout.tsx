@@ -47,14 +47,14 @@ export default async function WorkspaceLayout({
   const currentProject = workspace.projects[0] as unknown as ProjectWithDetails;
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#09090b] text-zinc-100">
+    <div className="flex h-screen w-screen overflow-hidden bg-white text-[#111827]">
       <AppSidebar
         workspace={workspace as unknown as WorkspaceWithDetails}
         currentProject={currentProject}
         currentUser={user}
       />
 
-      <main className="flex flex-1 flex-col overflow-hidden bg-[#09090b]">
+      <main className="flex flex-1 flex-col overflow-hidden bg-white">
         {children}
       </main>
 

@@ -2,6 +2,7 @@ import { formatZodError } from "@/lib/utils";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireWorkspaceMember } from "@/lib/auth";
+import { sendWorkspaceInviteEmail } from "@/lib/event-notifications";
 import { WorkspaceRole } from "@prisma/client";
 import { z } from "zod";
 import crypto from "crypto";
@@ -18,7 +19,7 @@ export async function POST(
   try {
     const { slug } = await params;
     // Require ADMIN or OWNER role
-    const { workspace } = await requireWorkspaceMember(slug, [
+    const { workspace, user } = await requireWorkspaceMember(slug, [
       WorkspaceRole.ADMIN,
       WorkspaceRole.OWNER,
     ]);
@@ -50,9 +51,21 @@ export async function POST(
       },
     });
 
+    const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin || "http://localhost:3000"}/join?token=${token}`;
+
+    // Dispatch workspace invitation email asynchronously (non-blocking)
+    sendWorkspaceInviteEmail({
+      workspaceName: workspace.name,
+      workspaceSlug: workspace.slug,
+      inviterName: user.name || "A workspace member",
+      inviteeEmail: email.toLowerCase(),
+      role,
+      inviteUrl,
+    }).catch((err) => console.error("Error sending invite email:", err));
+
     return NextResponse.json({
       invite,
-      inviteUrl: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/join?token=${token}`,
+      inviteUrl,
     });
   } catch (err: unknown) {
     if (err instanceof z.ZodError) {

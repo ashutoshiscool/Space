@@ -1,32 +1,48 @@
 @import "tailwindcss";
 
+@theme {
+  --color-canvas: var(--bg-canvas, #ffffff);
+  --color-surface-1: var(--bg-surface-1, #ffffff);
+  --color-surface-2: var(--bg-surface-2, #f8f9fa);
+  --color-layer-1: var(--bg-layer-1, #f1f3f5);
+  --color-layer-2: var(--bg-layer-2, #e9ecef);
+  --color-subtle: var(--border-subtle, #e5e7eb);
+  --color-strong: var(--border-strong, #d1d5db);
+  --color-primary: var(--txt-primary, #111827);
+  --color-secondary: var(--txt-secondary, #4b5563);
+  --color-placeholder: var(--txt-placeholder, #9ca3af);
+  --color-brand: var(--bg-accent-primary, #3e63dd);
+}
+
 @layer base {
-  :root {
-    --background: #09090b;
-    --foreground: #f4f4f5;
-    --card: #121215;
-    --card-foreground: #f4f4f5;
-    --popover: #18181b;
-    --popover-foreground: #f4f4f5;
-    --primary: #6366f1;
+  :root,
+  html[data-theme="light"],
+  html {
+    --background: #ffffff;
+    --foreground: #111827;
+    --card: #ffffff;
+    --card-foreground: #111827;
+    --popover: #ffffff;
+    --popover-foreground: #111827;
+    --primary: #3e63dd;
     --primary-foreground: #ffffff;
-    --secondary: #27272a;
-    --secondary-foreground: #f4f4f5;
-    --muted: #27272a;
-    --muted-foreground: #a1a1aa;
-    --accent: #27272a;
-    --accent-foreground: #f4f4f5;
+    --secondary: #f3f4f6;
+    --secondary-foreground: #111827;
+    --muted: #f3f4f6;
+    --muted-foreground: #6b7280;
+    --accent: #f3f4f6;
+    --accent-foreground: #111827;
     --destructive: #ef4444;
     --destructive-foreground: #ffffff;
-    --border: #27272a;
-    --input: #27272a;
-    --ring: #6366f1;
+    --border: #e5e7eb;
+    --input: #e5e7eb;
+    --ring: #3e63dd;
     --radius: 0.5rem;
   }
 
   body {
-    background-color: #09090b;
-    color: #f4f4f5;
+    background-color: var(--background, #ffffff);
+    color: var(--foreground, #111827);
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 }
@@ -42,12 +58,12 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #27272a;
+  background: #d1d5db;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
+  background: #9ca3af;
 }
 
 /* TipTap Prose Editor Styles */
@@ -65,7 +81,7 @@
   font-weight: 700;
   margin-top: 1.5rem;
   margin-bottom: 0.75rem;
-  color: #f4f4f5;
+  color: #111827;
 }
 
 .tiptap-content h2 {
@@ -73,7 +89,7 @@
   font-weight: 600;
   margin-top: 1.25rem;
   margin-bottom: 0.5rem;
-  color: #f4f4f5;
+  color: #111827;
 }
 
 .tiptap-content h3 {
@@ -81,7 +97,7 @@
   font-weight: 600;
   margin-top: 1rem;
   margin-bottom: 0.5rem;
-  color: #e4e4e7;
+  color: #1f2937;
 }
 
 .tiptap-content ul {
@@ -97,19 +113,20 @@
 }
 
 .tiptap-content pre {
-  background: #18181b;
-  border: 1px solid #27272a;
+  background: #f8f9fa;
+  border: 1px solid #e5e7eb;
   border-radius: 0.5rem;
   padding: 0.75rem 1rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.875rem;
   margin-bottom: 0.75rem;
   overflow-x: auto;
+  color: #111827;
 }
 
 .tiptap-content code {
-  background: #27272a;
-  color: #e4e4e7;
+  background: #f3f4f6;
+  color: #111827;
   padding: 0.15rem 0.35rem;
   border-radius: 0.25rem;
   font-size: 0.85em;
@@ -117,11 +134,11 @@
 }
 
 .tiptap-content blockquote {
-  border-left: 3px solid #6366f1;
+  border-left: 3px solid #3e63dd;
   padding-left: 1rem;
   margin-left: 0;
   margin-bottom: 0.75rem;
-  color: #a1a1aa;
+  color: #4b5563;
   font-style: italic;
 }
 
@@ -148,18 +165,18 @@
   margin-bottom: 1rem;
   overflow: hidden;
   border-radius: 0.375rem;
-  border: 1px solid #27272a;
+  border: 1px solid #e5e7eb;
 }
 
 .tiptap-content th,
 .tiptap-content td {
-  border: 1px solid #27272a;
+  border: 1px solid #e5e7eb;
   padding: 0.5rem 0.75rem;
   text-align: left;
 }
 
 .tiptap-content th {
-  background: #18181b;
+  background: #f8f9fa;
   font-weight: 600;
-  color: #e4e4e7;
+  color: #111827;
 }

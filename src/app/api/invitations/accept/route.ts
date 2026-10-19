@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       // 1. Add or update user as workspace member
       await tx.workspaceMember.upsert({
         where: {

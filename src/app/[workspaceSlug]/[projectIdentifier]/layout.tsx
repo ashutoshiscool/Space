@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { WorkspaceHeader } from "@/components/layout/WorkspaceHeader";
 import { IssueCreateModal } from "@/components/issues/IssueCreateModal";
+import { StickiesWidget } from "@/components/stickies/StickiesWidget";
 import { WorkspaceWithDetails, ProjectWithDetails } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -57,7 +58,7 @@ export default async function ProjectLayout({
   }
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden bg-[#09090b]">
+    <div className="flex flex-1 flex-col overflow-hidden bg-white">
       <WorkspaceHeader
         workspace={workspace as unknown as WorkspaceWithDetails}
         project={project as unknown as ProjectWithDetails}
@@ -68,6 +69,7 @@ export default async function ProjectLayout({
       </div>
 
       <IssueCreateModal project={project as unknown as ProjectWithDetails} />
+      <StickiesWidget />
     </div>
   );
 }
