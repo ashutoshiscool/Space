@@ -42,7 +42,7 @@ export default async function CyclesPage({
         include: { state: true },
       },
     },
-    orderBy: { startDate: "desc" },
+    orderBy: { startDate: "asc" },
   });
 
   const cycles: CycleWithMetrics[] = rawCycles.map((cycle) => {

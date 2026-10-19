@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSpaceStore } from "@/lib/store";
 import { IssueWithDetails, ProjectWithDetails } from "@/lib/types";
@@ -41,6 +41,18 @@ export function IssueDetailModal() {
   const [newSubIssueTitle, setNewSubIssueTitle] = useState("");
   const [isAddingSubIssue, setIsAddingSubIssue] = useState(false);
   const [activeTab, setActiveTab] = useState<"comments" | "activity">("comments");
+
+  // Keyboard shortcut to close on Escape
+  useEffect(() => {
+    if (!activeIssueId) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setActiveIssueId(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeIssueId, setActiveIssueId]);
 
   // Fetch full issue details
   const { data, isLoading } = useQuery<{ issue: IssueWithDetails & { project: ProjectWithDetails } }>({
@@ -180,7 +192,10 @@ export function IssueDetailModal() {
   if (!activeIssueId) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 sm:p-6 animate-in fade-in-0 duration-150">
+    <div
+      onClick={() => setActiveIssueId(null)}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 sm:p-6 animate-in fade-in-0 duration-150"
+    >
       <div
         className="relative flex h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-[#e5e7eb] bg-white shadow-2xl text-[#111827]"
         onClick={(e) => e.stopPropagation()}
@@ -208,6 +223,8 @@ export function IssueDetailModal() {
 
           <button
             onClick={() => setActiveIssueId(null)}
+            aria-label="Close modal"
+            data-testid="close-issue-modal"
             className="rounded p-1 text-[#6b7280] hover:bg-[#f3f4f6] hover:text-[#111827] transition-colors cursor-pointer"
           >
             <X className="h-4 w-4" />

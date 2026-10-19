@@ -79,7 +79,7 @@ async function main() {
       workspaceId: workspace.id,
       name: "Space Platform",
       identifier: "SPC",
-      description: "Next-gen issue tracker and collaboration system combining Linear speed and Notion depth",
+      description: "Next-gen issue tracker and collaboration system delivering blazingly fast project velocity",
       icon: "🚀",
       members: {
         create: [
