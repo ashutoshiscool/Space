@@ -2,6 +2,7 @@ import {
   Issue,
   State,
   Label,
+  Component,
   Cycle,
   Module,
   User,
@@ -9,16 +10,32 @@ import {
   Workspace,
   WorkspaceRole,
   IssuePriority,
+  IssueType,
   StateGroup,
   RelationType,
   IssueComment,
   IssueActivity,
+  IssueWatcher,
+  IssueWorklog,
   Page,
   Notification,
-} from ".prisma/client";
+} from "@prisma/client";
 
-export type { User, Project, Workspace, State, Label, Cycle, Module, Page, Notification };
-export { WorkspaceRole, IssuePriority, StateGroup, RelationType };
+export type {
+  User,
+  Project,
+  Workspace,
+  State,
+  Label,
+  Component,
+  Cycle,
+  Module,
+  Page,
+  Notification,
+  IssueWatcher,
+  IssueWorklog,
+};
+export { WorkspaceRole, IssuePriority, IssueType, StateGroup, RelationType };
 
 export type IssueWithDetails = Issue & {
   state: State;
@@ -28,11 +45,18 @@ export type IssueWithDetails = Issue & {
   labels: {
     label: Label;
   }[];
+  component?: Component | null;
   cycle?: Cycle | null;
   module?: Module | null;
   createdBy: Pick<User, "id" | "name" | "email" | "avatarUrl">;
   subIssues?: IssueWithDetails[];
   parent?: Pick<Issue, "id" | "sequenceId" | "title"> | null;
+  watchers?: {
+    user: Pick<User, "id" | "name" | "email" | "avatarUrl">;
+  }[];
+  worklogs?: (IssueWorklog & {
+    user: Pick<User, "id" | "name" | "email" | "avatarUrl">;
+  })[];
   comments?: (IssueComment & {
     user: Pick<User, "id" | "name" | "email" | "avatarUrl">;
   })[];
@@ -56,12 +80,15 @@ export type IssueWithDetails = Issue & {
   _count?: {
     comments: number;
     subIssues: number;
+    watchers?: number;
+    worklogs?: number;
   };
 };
 
 export type ProjectWithDetails = Project & {
   states: State[];
   labels: Label[];
+  components: Component[];
   cycles: Cycle[];
   modules: Module[];
   members: {

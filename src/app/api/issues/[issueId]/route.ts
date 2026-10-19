@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireIssueAccess } from "@/lib/auth";
-import { IssuePriority, WorkspaceRole, Prisma } from "@prisma/client";
+import { IssuePriority, IssueType, WorkspaceRole, Prisma } from "@prisma/client";
 import { z } from "zod";
 import { formatZodError } from "@/lib/utils";
 import {
@@ -12,13 +12,17 @@ import {
 const updateIssueSchema = z.object({
   title: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
+  type: z.nativeEnum(IssueType).optional(),
   stateId: z.string().optional(),
   priority: z.nativeEnum(IssuePriority).optional(),
   estimate: z.number().int().nullable().optional(),
+  timeEstimate: z.number().int().nullable().optional(),
+  timeSpent: z.number().int().nullable().optional(),
   startDate: z.string().nullable().optional(),
   dueDate: z.string().nullable().optional(),
   cycleId: z.string().nullable().optional(),
   moduleId: z.string().nullable().optional(),
+  componentId: z.string().nullable().optional(),
   parentId: z.string().nullable().optional(),
   isArchived: z.boolean().optional(),
   assigneeIds: z.array(z.string()).optional(),
@@ -45,6 +49,7 @@ export async function GET(
             workspaceId: true,
             states: { orderBy: { sequence: "asc" } },
             labels: true,
+            components: true,
             cycles: { where: { isCompleted: false } },
             modules: true,
             members: {
@@ -55,6 +60,7 @@ export async function GET(
           },
         },
         state: true,
+        component: true,
         assignees: {
           include: {
             user: { select: { id: true, name: true, email: true, avatarUrl: true } },
@@ -69,6 +75,17 @@ export async function GET(
         module: true,
         createdBy: {
           select: { id: true, name: true, email: true, avatarUrl: true },
+        },
+        watchers: {
+          include: {
+            user: { select: { id: true, name: true, email: true, avatarUrl: true } },
+          },
+        },
+        worklogs: {
+          include: {
+            user: { select: { id: true, name: true, email: true, avatarUrl: true } },
+          },
+          orderBy: { loggedAt: "desc" },
         },
         parent: {
           select: { id: true, sequenceId: true, title: true },
@@ -170,7 +187,7 @@ export async function PATCH(
     }
 
     // Process updates and generate activity audit entries
-    const updated = await prisma.$transaction(async (tx) => {
+    const updated: any = await prisma.$transaction(async (tx: any) => {
       // Check for state change
       if (data.stateId && data.stateId !== fullCurrent.stateId) {
         const newState = await tx.state.findUnique({ where: { id: data.stateId } });
@@ -246,9 +263,12 @@ export async function PATCH(
       const issueUpdateData: Prisma.IssueUpdateInput = {};
       if (data.title !== undefined) issueUpdateData.title = data.title;
       if (data.description !== undefined) issueUpdateData.description = data.description;
+      if (data.type !== undefined) issueUpdateData.type = data.type;
       if (data.stateId !== undefined) issueUpdateData.state = { connect: { id: data.stateId } };
       if (data.priority !== undefined) issueUpdateData.priority = data.priority;
       if (data.estimate !== undefined) issueUpdateData.estimate = data.estimate;
+      if (data.timeEstimate !== undefined) issueUpdateData.timeEstimate = data.timeEstimate;
+      if (data.timeSpent !== undefined) issueUpdateData.timeSpent = data.timeSpent;
       if (data.startDate !== undefined)
         issueUpdateData.startDate = data.startDate ? new Date(data.startDate) : null;
       if (data.dueDate !== undefined)
@@ -257,6 +277,8 @@ export async function PATCH(
         issueUpdateData.cycle = data.cycleId ? { connect: { id: data.cycleId } } : { disconnect: true };
       if (data.moduleId !== undefined)
         issueUpdateData.module = data.moduleId ? { connect: { id: data.moduleId } } : { disconnect: true };
+      if (data.componentId !== undefined)
+        issueUpdateData.component = data.componentId ? { connect: { id: data.componentId } } : { disconnect: true };
       if (data.parentId !== undefined)
         issueUpdateData.parent = data.parentId ? { connect: { id: data.parentId } } : { disconnect: true };
       if (data.isArchived !== undefined) issueUpdateData.isArchived = data.isArchived;
@@ -266,6 +288,7 @@ export async function PATCH(
         data: issueUpdateData,
         include: {
           state: true,
+          component: true,
           assignees: {
             include: {
               user: { select: { id: true, name: true, email: true, avatarUrl: true } },
@@ -273,6 +296,17 @@ export async function PATCH(
           },
           labels: {
             include: { label: true },
+          },
+          watchers: {
+            include: {
+              user: { select: { id: true, name: true, email: true, avatarUrl: true } },
+            },
+          },
+          worklogs: {
+            include: {
+              user: { select: { id: true, name: true, email: true, avatarUrl: true } },
+            },
+            orderBy: { loggedAt: "desc" },
           },
           cycle: true,
           module: true,
@@ -297,7 +331,7 @@ export async function PATCH(
         actor: { id: user.id, name: user.name, email: user.email },
         details: {
           oldState: fullCurrent.state.name,
-          newState: updated.state.name,
+          newState: (updated as any)?.state?.name || "Updated",
         },
       }).catch((e) => console.error("[Notifications] Status change error:", e));
     }

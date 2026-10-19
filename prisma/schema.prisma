@@ -37,6 +37,13 @@ enum RelationType {
   DUPLICATE
 }
 
+enum IssueType {
+  STORY
+  TASK
+  BUG
+  EPIC
+}
+
 model User {
   id             String            @id @default(uuid())
   email          String            @unique
@@ -54,6 +61,8 @@ model User {
   activities     IssueActivity[]
   notifications  Notification[]
   pages          Page[]
+  issueWatchers  IssueWatcher[]
+  issueWorklogs  IssueWorklog[]
 }
 
 model Workspace {
@@ -117,6 +126,7 @@ model Project {
   modules     Module[]
   pages       Page[]
   labels      Label[]
+  components  Component[]
   
   @@unique([workspaceId, identifier])
 }
@@ -159,45 +169,69 @@ model Label {
   @@unique([projectId, name])
 }
 
-model Issue {
-  id          String          @id @default(uuid())
+model Component {
+  id          String   @id @default(uuid())
   projectId   String
-  sequenceId  Int             // Issue number (e.g. 101 -> "SPC-101")
-  title       String
-  description String?         @db.Text
-  priority    IssuePriority   @default(NONE)
-  stateId     String
-  estimate    Int?
-  startDate   DateTime?
-  dueDate     DateTime?
-  parentId    String?
-  cycleId     String?
-  moduleId    String?
-  createdById String
-  isArchived  Boolean         @default(false)
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  name        String
+  description String?
+  leadId      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   
-  project     Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  state       State           @relation(fields: [stateId], references: [id])
-  parent      Issue?          @relation("SubIssues", fields: [parentId], references: [id], onDelete: SetNull)
-  subIssues   Issue[]         @relation("SubIssues")
-  cycle       Cycle?          @relation(fields: [cycleId], references: [id], onDelete: SetNull)
-  module      Module?         @relation(fields: [moduleId], references: [id], onDelete: SetNull)
-  createdBy   User            @relation("IssueCreator", fields: [createdById], references: [id])
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  issues      Issue[]
   
-  assignees   IssueAssignee[]
-  labels      IssueLabel[]
-  comments    IssueComment[]
-  activities  IssueActivity[]
-  attachments IssueAttachment[]
-  relations   IssueRelation[] @relation("IssueSource")
-  relatedBy   IssueRelation[] @relation("IssueTarget")
+  @@unique([projectId, name])
+}
+
+model Issue {
+  id           String          @id @default(uuid())
+  projectId    String
+  sequenceId   Int             // Issue number (e.g. 101 -> "SPC-101")
+  type         IssueType       @default(TASK)
+  title        String
+  description  String?         @db.Text
+  priority     IssuePriority   @default(NONE)
+  stateId      String
+  estimate     Int?
+  timeEstimate Int?            // in minutes
+  timeSpent    Int?            @default(0) // in minutes
+  startDate    DateTime?
+  dueDate      DateTime?
+  parentId     String?
+  cycleId      String?
+  moduleId     String?
+  componentId  String?
+  createdById  String
+  isArchived   Boolean         @default(false)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  
+  project      Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  state        State           @relation(fields: [stateId], references: [id])
+  parent       Issue?          @relation("SubIssues", fields: [parentId], references: [id], onDelete: SetNull)
+  subIssues    Issue[]         @relation("SubIssues")
+  cycle        Cycle?          @relation(fields: [cycleId], references: [id], onDelete: SetNull)
+  module       Module?         @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  component    Component?      @relation(fields: [componentId], references: [id], onDelete: SetNull)
+  createdBy    User            @relation("IssueCreator", fields: [createdById], references: [id])
+  
+  assignees    IssueAssignee[]
+  labels       IssueLabel[]
+  watchers     IssueWatcher[]
+  worklogs     IssueWorklog[]
+  comments     IssueComment[]
+  activities   IssueActivity[]
+  attachments  IssueAttachment[]
+  relations    IssueRelation[] @relation("IssueSource")
+  relatedBy    IssueRelation[] @relation("IssueTarget")
   
   @@unique([projectId, sequenceId])
   @@index([projectId, stateId])
   @@index([projectId, cycleId])
   @@index([projectId, moduleId])
+  @@index([projectId, componentId])
+  @@index([projectId, type])
   @@index([createdById])
   @@index([dueDate])
 }
@@ -222,6 +256,33 @@ model IssueLabel {
   label     Label    @relation(fields: [labelId], references: [id], onDelete: Cascade)
   
   @@unique([issueId, labelId])
+}
+
+model IssueWatcher {
+  id        String   @id @default(uuid())
+  issueId   String
+  userId    String
+  createdAt DateTime @default(now())
+  
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([issueId, userId])
+}
+
+model IssueWorklog {
+  id          String   @id @default(uuid())
+  issueId     String
+  userId      String
+  timeSpent   Int      // in minutes
+  description String?
+  loggedAt    DateTime @default(now())
+  createdAt   DateTime @default(now())
+  
+  issue       Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([issueId, loggedAt])
 }
 
 model IssueRelation {

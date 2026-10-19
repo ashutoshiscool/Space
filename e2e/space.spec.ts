@@ -240,4 +240,47 @@ test.describe("Space End-to-End Browser Workflows", () => {
     await page.goto("/acme-corp/SPC/issues");
     await expect(page.locator('button:has-text("Export CSV")')).toBeVisible({ timeout: 10000 });
   });
+
+  test("4. Flagship Project Summary, Status Overview Donut & Recent Activity", async ({ page }) => {
+    // Login with seeded user
+    await page.goto("/login");
+    await page.fill('input[type="email"]', "sarah@space.dev");
+    await page.fill('input[type="password"]', "password123");
+    await page.click('button[type="submit"]');
+
+    // Navigate to Project Summary
+    await page.goto("/acme-corp/SPC/summary");
+    await expect(page.locator("text=Status overview").first()).toBeVisible({ timeout: 15000 });
+
+    // Verify Horizontal Project Navigation Tabs
+    await expect(page.locator("text=Summary").first()).toBeVisible();
+    await expect(page.locator("text=Stats").first()).toBeVisible();
+    await expect(page.locator("text=Preview Task List").first()).toBeVisible();
+    await expect(page.locator("text=Work Board").first()).toBeVisible();
+    await expect(page.locator("text=Calendar").first()).toBeVisible();
+    await expect(page.locator("text=Backlog").first()).toBeVisible();
+    await expect(page.locator("text=Cycles").first()).toBeVisible();
+
+    // Verify 4 KPI Metric Cards
+    await expect(page.locator("text=completed").first()).toBeVisible();
+    await expect(page.locator("text=updated").first()).toBeVisible();
+    await expect(page.locator("text=created").first()).toBeVisible();
+    await expect(page.locator("text=due soon").first()).toBeVisible();
+
+    // Verify Status Overview Card & Donut Chart
+    await expect(page.locator("text=Total work item").first()).toBeVisible();
+    await expect(page.locator("text=View all work items").first()).toBeVisible();
+
+    // Verify Recent Activity Timeline
+    await expect(page.locator("text=Recent activity").first()).toBeVisible();
+    await expect(page.locator("text=Stay up to date with what's happening across the space.").first()).toBeVisible();
+
+    // Verify Quickstart Floating Pill
+    const quickstartPill = page.locator("button:has-text('Quickstart')").first();
+    await expect(quickstartPill).toBeVisible();
+    await quickstartPill.click();
+    await expect(page.locator("text=Project Quickstart Guide")).toBeVisible({ timeout: 5000 });
+    await page.keyboard.press("Escape");
+  });
 });
+

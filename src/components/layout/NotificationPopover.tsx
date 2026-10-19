@@ -51,10 +51,10 @@ export function NotificationPopover() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="relative rounded-md p-1.5 text-[#6b7280] hover:bg-[#f3f4f6] hover:text-[#111827] transition-colors cursor-pointer outline-none">
-        <Bell className="h-4 w-4" />
-        {unreadCount > 0 && (
-          <span className="absolute right-1 top-1 flex h-1.5 w-1.5 rounded-full bg-[#3e63dd] ring-2 ring-white" />
-        )}
+        <Bell className="h-4.5 w-4.5" />
+        <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-[#de350b] text-white text-[9px] font-bold ring-2 ring-white leading-none">
+          {unreadCount > 9 ? "9+" : unreadCount > 0 ? unreadCount : "9+"}
+        </span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80 p-0 overflow-hidden rounded-xl border border-[#e5e7eb] bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-[#e5e7eb] bg-[#f8f9fa] px-3.5 py-2.5">

@@ -64,7 +64,7 @@ export default async function ProjectLayout({
         project={project as unknown as ProjectWithDetails}
       />
 
-      <div className="flex flex-1 overflow-hidden p-6">
+      <div className="flex flex-1 overflow-hidden">
         {children}
       </div>
 

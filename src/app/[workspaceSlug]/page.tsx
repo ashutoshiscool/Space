@@ -18,7 +18,7 @@ export default async function WorkspaceRootPage({
   }
 
   if (workspace.projects.length > 0) {
-    redirect(`/${workspace.slug}/${workspace.projects[0].identifier}/issues`);
+    redirect(`/${workspace.slug}/${workspace.projects[0].identifier}/summary`);
   }
 
   redirect(`/${workspace.slug}/settings`);

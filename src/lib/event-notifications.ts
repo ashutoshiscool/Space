@@ -327,6 +327,11 @@ export async function dispatchEventNotification(
             user: { select: { id: true, name: true, email: true } },
           },
         },
+        watchers: {
+          include: {
+            user: { select: { id: true, name: true, email: true } },
+          },
+        },
         createdBy: {
           select: { id: true, name: true, email: true },
         },
@@ -375,9 +380,10 @@ export async function dispatchEventNotification(
       }
 
       case "ISSUE_COMMENT_ADDED": {
-        // Notify assignees + reporter + any mentioned users
+        // Notify assignees + reporter + watchers + any mentioned users
         issue.assignees.forEach((a) => addRecipient(a.user));
         addRecipient(issue.createdBy);
+        issue.watchers?.forEach((w) => addRecipient(w.user));
 
         if (details?.mentionedUserIds && details.mentionedUserIds.length > 0) {
           for (const mId of details.mentionedUserIds) {
@@ -392,9 +398,10 @@ export async function dispatchEventNotification(
       case "ISSUE_PRIORITY_CHANGED":
       case "ISSUE_DUE_DATE_CHANGED":
       case "ISSUE_DELETED": {
-        // Notify assignees + reporter
+        // Notify assignees + reporter + watchers
         issue.assignees.forEach((a) => addRecipient(a.user));
         addRecipient(issue.createdBy);
+        issue.watchers?.forEach((w) => addRecipient(w.user));
         break;
       }
 

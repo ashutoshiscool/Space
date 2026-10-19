@@ -43,6 +43,19 @@ export function IssuesPageClient({
 
   const allIssues = issuesData?.issues || initialIssues;
 
+  // Fetch current user for "Only My Issues" filter
+  const { data: userData } = useQuery<{ user?: { id: string } }>({
+    queryKey: ["currentUser"],
+    queryFn: async () => {
+      const res = await fetch("/api/auth/me");
+      if (!res.ok) return { user: undefined };
+      return res.json();
+    },
+    staleTime: 60000,
+  });
+
+  const currentUserId = userData?.user?.id;
+
   // Apply in-memory filters for instantaneous sub-10ms response
   const filteredIssues = useMemo(() => {
     return allIssues.filter((issue) => {
@@ -80,19 +93,44 @@ export function IssuesPageClient({
         if (!hasAssignee) return false;
       }
 
-      // 5. Cycle filter
+      // 5. Types filter
+      if (filters.types.length > 0 && !filters.types.includes(issue.type)) {
+        return false;
+      }
+
+      // 6. Component filter
+      if (
+        filters.componentIds.length > 0 &&
+        (!issue.componentId || !filters.componentIds.includes(issue.componentId))
+      ) {
+        return false;
+      }
+
+      // 7. Quick pill: Only My Issues
+      if (filters.onlyMyIssues) {
+        if (!currentUserId) return true;
+        const isAssignedToMe = issue.assignees?.some((a) => a.user.id === currentUserId);
+        if (!isAssignedToMe) return false;
+      }
+
+      // 8. Quick pill: Only Unassigned
+      if (filters.onlyUnassigned) {
+        if (issue.assignees && issue.assignees.length > 0) return false;
+      }
+
+      // 9. Cycle filter
       if (filters.cycleId && issue.cycleId !== filters.cycleId) {
         return false;
       }
 
-      // 6. Module filter
+      // 10. Module filter
       if (filters.moduleId && issue.moduleId !== filters.moduleId) {
         return false;
       }
 
       return true;
     });
-  }, [allIssues, filters, project.identifier]);
+  }, [allIssues, filters, project.identifier, currentUserId]);
 
   if (allIssues.length === 0) {
     return (
@@ -117,7 +155,7 @@ export function IssuesPageClient({
   }
 
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden">
+    <div className="flex h-full w-full flex-col overflow-hidden p-6">
       {viewMode === "kanban" && (
         <KanbanBoard
           states={states}

@@ -1,11 +1,15 @@
 import { create } from "zustand";
-import { IssuePriority } from "@prisma/client";
+import { IssuePriority, IssueType } from "@prisma/client";
 
 export interface ViewFilterState {
   search: string;
   priorities: IssuePriority[];
   stateIds: string[];
   assigneeIds: string[];
+  types: IssueType[];
+  componentIds: string[];
+  onlyMyIssues: boolean;
+  onlyUnassigned: boolean;
   cycleId?: string;
   moduleId?: string;
 }
@@ -44,6 +48,10 @@ interface SpaceStore {
   togglePriorityFilter: (priority: IssuePriority) => void;
   toggleStateFilter: (stateId: string) => void;
   toggleAssigneeFilter: (assigneeId: string) => void;
+  toggleTypeFilter: (type: IssueType) => void;
+  toggleComponentFilter: (componentId: string) => void;
+  setOnlyMyIssues: (val: boolean) => void;
+  setOnlyUnassigned: (val: boolean) => void;
   setCycleFilter: (cycleId?: string) => void;
   setModuleFilter: (moduleId?: string) => void;
   clearFilters: () => void;
@@ -81,6 +89,10 @@ export const useSpaceStore = create<SpaceStore>((set) => ({
     priorities: [],
     stateIds: [],
     assigneeIds: [],
+    types: [],
+    componentIds: [],
+    onlyMyIssues: false,
+    onlyUnassigned: false,
   },
   setSearch: (search) =>
     set((state) => ({ filters: { ...state.filters, search } })),
@@ -120,6 +132,38 @@ export const useSpaceStore = create<SpaceStore>((set) => ({
         },
       };
     }),
+  toggleTypeFilter: (type) =>
+    set((state) => {
+      const exists = state.filters.types.includes(type);
+      return {
+        filters: {
+          ...state.filters,
+          types: exists
+            ? state.filters.types.filter((t) => t !== type)
+            : [...state.filters.types, type],
+        },
+      };
+    }),
+  toggleComponentFilter: (componentId) =>
+    set((state) => {
+      const exists = state.filters.componentIds.includes(componentId);
+      return {
+        filters: {
+          ...state.filters,
+          componentIds: exists
+            ? state.filters.componentIds.filter((id) => id !== componentId)
+            : [...state.filters.componentIds, componentId],
+        },
+      };
+    }),
+  setOnlyMyIssues: (val) =>
+    set((state) => ({
+      filters: { ...state.filters, onlyMyIssues: val },
+    })),
+  setOnlyUnassigned: (val) =>
+    set((state) => ({
+      filters: { ...state.filters, onlyUnassigned: val },
+    })),
   setCycleFilter: (cycleId) =>
     set((state) => ({ filters: { ...state.filters, cycleId } })),
   setModuleFilter: (moduleId) =>
@@ -131,6 +175,10 @@ export const useSpaceStore = create<SpaceStore>((set) => ({
         priorities: [],
         stateIds: [],
         assigneeIds: [],
+        types: [],
+        componentIds: [],
+        onlyMyIssues: false,
+        onlyUnassigned: false,
       },
     }),
 

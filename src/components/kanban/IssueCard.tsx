@@ -8,9 +8,11 @@ import { State } from "@prisma/client";
 import { useSpaceStore } from "@/lib/store";
 import { formatDate } from "@/lib/utils";
 import { PriorityIcon } from "@/components/ui/PriorityIcon";
+import { StateIcon } from "@/components/ui/StateIcon";
+import { IssueTypeIcon } from "@/components/issues/IssueTypeIcon";
 import { QuickAssignPopover } from "@/components/issues/QuickAssignPopover";
 import { QuickStatePopover } from "@/components/issues/QuickStatePopover";
-import { MessageSquare, GitBranch, Calendar } from "lucide-react";
+import { MessageSquare, GitBranch, Calendar, Clock, Box } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface IssueCardProps {
@@ -63,12 +65,13 @@ export function IssueCard({
         isOverlay && "rotate-1 shadow-2xl border-[#3e63dd] bg-white scale-[1.02] cursor-grabbing z-50"
       )}
     >
-      {/* Top row: Issue Key, Priority glyph, Estimate */}
+      {/* Top row: Issue Key, Priority glyph, Type glyph, Estimate */}
       <div className="flex items-center justify-between text-xs">
         <div className="flex items-center gap-1.5">
           {states && states.length > 0 ? (
             <QuickStatePopover issueId={issue.id} currentState={issue.state} states={states} size={13} />
           ) : null}
+          <IssueTypeIcon type={issue.type} size={13} />
           <PriorityIcon priority={issue.priority} size={13} />
           <span className="font-mono text-[11px] font-medium text-[#6b7280] group-hover:text-[#111827] transition-colors">
             {projectIdentifier}-{issue.sequenceId}
@@ -87,10 +90,16 @@ export function IssueCard({
         {issue.title}
       </h4>
 
-      {/* Labels */}
-      {issue.labels && issue.labels.length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {issue.labels.map(({ label }) => (
+      {/* Labels & Components */}
+      {((issue.labels && issue.labels.length > 0) || issue.component) && (
+        <div className="flex flex-wrap items-center gap-1">
+          {issue.component && (
+            <span className="inline-flex items-center gap-1 rounded bg-[#eff6ff] px-1.5 py-0.2 text-[9px] font-semibold text-[#3e63dd] border border-[#dbeafe] truncate max-w-[120px]">
+              <Box className="h-2.5 w-2.5 shrink-0" />
+              <span className="truncate">{issue.component.name}</span>
+            </span>
+          )}
+          {issue.labels?.map(({ label }) => (
             <span
               key={label.id}
               className="rounded px-1.5 py-0.2 text-[10px] font-medium leading-normal"
@@ -106,9 +115,9 @@ export function IssueCard({
         </div>
       )}
 
-      {/* Footer: Due date, Sub-issues, Comments count & Assignees */}
+      {/* Footer: Due date, Sub-issues, Comments count, Time Tracking & Assignees */}
       <div className="flex items-center justify-between pt-1 border-t border-[#f1f3f5] text-[11px] text-[#6b7280]">
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           {issue.dueDate && (
             <span
               className={cn(
@@ -134,6 +143,19 @@ export function IssueCard({
             <span className="flex items-center gap-1 text-[10px] text-[#6b7280]" title={`${issue.comments.length} comments`}>
               <MessageSquare className="h-3 w-3" />
               <span>{issue.comments.length}</span>
+            </span>
+          )}
+
+          {Boolean(issue.timeSpent && issue.timeSpent > 0) && (
+            <span
+              className="flex items-center gap-1 font-mono text-[10px] text-[#374151] bg-[#f3f4f6] px-1.5 py-0.2 rounded border border-[#e5e7eb]"
+              title={`Time spent: ${issue.timeSpent}m / estimate: ${issue.timeEstimate || 0}m`}
+            >
+              <Clock className="h-2.5 w-2.5 text-[#3e63dd]" />
+              <span>
+                {Math.floor(issue.timeSpent! / 60) > 0 ? `${Math.floor(issue.timeSpent! / 60)}h ` : ""}
+                {issue.timeSpent! % 60 > 0 ? `${issue.timeSpent! % 60}m` : ""}
+              </span>
             </span>
           )}
         </div>

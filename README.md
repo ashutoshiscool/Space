@@ -160,6 +160,50 @@ A persistent personal scratchpad available in the bottom-right corner of every s
 
 ---
 
+### 11. Flagship Project Summary & Status Overview Dashboard
+A project executive command center providing immediate visibility into team momentum, delivery health, and real-time activity.
+
+- **Rolling 7-Day Metric Cards:** 4 high-impact KPI summary cards tracking `Completed` (last 7 days), `Updated` (last 7 days), `Created` (last 7 days), and `Due Soon` (next 7 days).
+- **Interactive Status Overview Donut Chart:** Dynamic SVG multi-color donut chart with live issue counts, center total, and a color-coded status breakdown legend with direct issue filtering.
+- **Real-Time Recent Activity Stream:** Chronological event timeline grouped by date (Today, Yesterday, Earlier) featuring user avatars, action descriptions, issue pills with type icons, and relative timestamps.
+- **Customizable Reports Banner:** Dismissable recommendation banner highlighting custom reporting dashboards with visual previews.
+- **Horizontal Project Navigation Tabs:** Fast switching between `Summary`, `Stats`, `Preview Task List`, `Work Board`, `Calendar`, `Backlog`, `Cycles`, and additional views.
+- **Floating Quickstart Assistant:** Bottom-right floating quickstart pill with onboarding steps and keyboard shortcut references.
+
+---
+
+### 12. Dedicated Backlog & Sprint Planning
+A dedicated planning hub for product managers and engineering leads to organize future work and plan upcoming iterations.
+
+- **Sprint Iteration Buckets:** Manage active and future sprint cycles with dates, story point velocity, and completion statuses.
+- **Backlog Sizing:** Prioritize and estimate unassigned product backlog items before dragging them into sprint iterations.
+- **Collapsible Buckets & Inline Issue Creation:** Quickly expand, collapse, or append issues to any sprint container.
+
+---
+
+### 13. Granular Issue Types (Story, Task, Bug, Epic)
+Full support for modern agile issue classifications with distinctive visual indicators:
+- **Story** (`Bookmark`, emerald) — User-facing features and deliverables.
+- **Task** (`CheckSquare`, blue) — Technical engineering and operational tasks.
+- **Bug** (`Bug`, rose) — Defects and incident tracking.
+- **Epic** (`Zap`, purple) — High-level strategic initiatives and parent work packages.
+
+---
+
+### 14. Time Tracking, Worklogs & Remaining Estimates
+Accurately monitor effort and sprint velocity with dedicated time logging:
+- **Original Estimates:** Specify time estimates in human-friendly formats (e.g. `1d 4h`, `2h 30m`, `45m`).
+- **Atomic Worklogs:** Log time spent with dates, descriptions, and user attribution.
+- **Remaining Estimate Calculations:** Automatically calculates and displays time logged versus remaining original estimate.
+
+---
+
+### 15. Issue Watchers & Clone Issue
+- **Watchers:** Subscribe to receive automatic in-app and email notifications when work progress changes.
+- **Clone Issue:** Duplicate issues with one click, automatically incrementing sequential identifiers and creating bidirectional relational links.
+
+---
+
 ## ⌨️ Keyboard Shortcuts
 
 Space is built for keyboard lovers:

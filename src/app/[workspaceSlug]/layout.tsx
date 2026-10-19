@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { AppSidebar } from "@/components/layout/AppSidebar";
+import { GlobalTopNav } from "@/components/layout/GlobalTopNav";
 import { CommandPalette } from "@/components/command/CommandPalette";
 import { IssueDetailModal } from "@/components/issues/IssueDetailModal";
 import { WorkspaceWithDetails, ProjectWithDetails } from "@/lib/types";
@@ -47,16 +48,26 @@ export default async function WorkspaceLayout({
   const currentProject = workspace.projects[0] as unknown as ProjectWithDetails;
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-white text-[#111827]">
-      <AppSidebar
+    <div className="flex h-screen w-screen flex-col overflow-hidden bg-white text-[#111827]">
+      {/* Top Global Navigation Bar matching Jira */}
+      <GlobalTopNav
         workspace={workspace as unknown as WorkspaceWithDetails}
         currentProject={currentProject}
         currentUser={user}
       />
 
-      <main className="flex flex-1 flex-col overflow-hidden bg-white">
-        {children}
-      </main>
+      {/* Main Workspace Body: Sidebar + Main Content */}
+      <div className="flex flex-1 overflow-hidden">
+        <AppSidebar
+          workspace={workspace as unknown as WorkspaceWithDetails}
+          currentProject={currentProject}
+          currentUser={user}
+        />
+
+        <main className="flex flex-1 flex-col overflow-hidden bg-white">
+          {children}
+        </main>
+      </div>
 
       {/* Global interactive modals */}
       <CommandPalette

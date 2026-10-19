@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireProjectMember } from "@/lib/auth";
-import { IssuePriority, WorkspaceRole } from "@/lib/types";
+import { IssuePriority, IssueType, WorkspaceRole } from "@/lib/types";
 import type { Prisma } from ".prisma/client";
 import { z } from "zod";
 import { formatZodError } from "@/lib/utils";
@@ -13,13 +13,16 @@ import {
 const createIssueSchema = z.object({
   title: z.string().min(1, "Title is required").max(300),
   description: z.string().optional(),
+  type: z.nativeEnum(IssueType).default(IssueType.TASK),
   stateId: z.string(),
   priority: z.nativeEnum(IssuePriority).default(IssuePriority.NONE),
   estimate: z.number().int().nullable().optional(),
+  timeEstimate: z.number().int().nullable().optional(),
   startDate: z.string().nullable().optional(),
   dueDate: z.string().nullable().optional(),
   cycleId: z.string().nullable().optional(),
   moduleId: z.string().nullable().optional(),
+  componentId: z.string().nullable().optional(),
   parentId: z.string().nullable().optional(),
   assigneeIds: z.array(z.string()).default([]),
   labelIds: z.array(z.string()).default([]),
@@ -38,6 +41,8 @@ export async function GET(
 
     const stateId = searchParams.get("stateId");
     const priority = searchParams.get("priority");
+    const type = searchParams.get("type");
+    const componentId = searchParams.get("componentId");
     const assigneeId = searchParams.get("assigneeId");
     const cycleId = searchParams.get("cycleId");
     const moduleId = searchParams.get("moduleId");
@@ -60,6 +65,17 @@ export async function GET(
       if (prioList.length > 0) {
         where.priority = { in: prioList };
       }
+    }
+
+    if (type) {
+      const typeList = type.split(",").filter(Boolean) as IssueType[];
+      if (typeList.length > 0) {
+        where.type = { in: typeList };
+      }
+    }
+
+    if (componentId) {
+      where.componentId = componentId === "none" ? null : componentId;
     }
 
     if (assigneeId) {
@@ -95,6 +111,7 @@ export async function GET(
       where,
       include: {
         state: true,
+        component: true,
         assignees: {
           include: {
             user: { select: { id: true, name: true, email: true, avatarUrl: true } },
@@ -177,15 +194,18 @@ export async function POST(
         data: {
           projectId,
           sequenceId: nextSequenceId,
+          type: data.type,
           title: data.title,
           description: data.description,
           stateId: data.stateId,
           priority: data.priority,
           estimate: data.estimate,
+          timeEstimate: data.timeEstimate,
           startDate: data.startDate ? new Date(data.startDate) : null,
           dueDate: data.dueDate ? new Date(data.dueDate) : null,
           cycleId: data.cycleId,
           moduleId: data.moduleId,
+          componentId: data.componentId,
           parentId: data.parentId,
           createdById: user.id,
           assignees: {
@@ -204,6 +224,7 @@ export async function POST(
         },
         include: {
           state: true,
+          component: true,
           assignees: {
             include: {
               user: { select: { id: true, name: true, email: true, avatarUrl: true } },

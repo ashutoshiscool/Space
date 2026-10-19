@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSpaceStore } from "@/lib/store";
-import { ProjectWithDetails } from "@/lib/types";
-import { IssuePriority } from "@prisma/client";
+import { ProjectWithDetails, Component } from "@/lib/types";
+import { IssuePriority, IssueType } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { PriorityIcon } from "@/components/ui/PriorityIcon";
 import { StateIcon } from "@/components/ui/StateIcon";
+import { IssueTypeIcon } from "@/components/issues/IssueTypeIcon";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -16,7 +17,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DatePicker } from "@/components/ui/DatePicker";
-import { X, Check } from "lucide-react";
+import { X, Check, Box, UserCheck } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface IssueCreateModalProps {
   project: ProjectWithDetails;
@@ -34,6 +36,8 @@ export function IssueCreateModal({ project }: IssueCreateModalProps) {
     project.states.find((s) => s.name.toLowerCase() === "todo") ||
     project.states[0];
 
+  const [type, setType] = useState<IssueType>(IssueType.TASK);
+  const [componentId, setComponentId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [stateId, setStateId] = useState(
@@ -53,6 +57,30 @@ export function IssueCreateModal({ project }: IssueCreateModalProps) {
   const [dueDate, setDueDate] = useState<string | null>(
     createIssueDefaults.dueDate || null
   );
+
+  // Fetch current user
+  const { data: userData } = useQuery<{ user?: { id: string; name: string } }>({
+    queryKey: ["currentUser"],
+    queryFn: async () => {
+      const res = await fetch("/api/auth/me");
+      if (!res.ok) return { user: undefined };
+      return res.json();
+    },
+    staleTime: 60000,
+  });
+
+  // Fetch components
+  const { data: componentsData } = useQuery<{ components: Component[] }>({
+    queryKey: ["components", project.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/projects/${project.id}/components`);
+      if (!res.ok) return { components: [] };
+      return res.json();
+    },
+    staleTime: 30000,
+  });
+
+  const components = componentsData?.components || project.components || [];
 
   React.useEffect(() => {
     if (isCreateIssueOpen) {
@@ -77,6 +105,8 @@ export function IssueCreateModal({ project }: IssueCreateModalProps) {
         body: JSON.stringify({
           title: title.trim(),
           description: description.trim() || undefined,
+          type,
+          componentId,
           stateId: stateId || defaultState?.id,
           priority,
           estimate,
@@ -96,6 +126,8 @@ export function IssueCreateModal({ project }: IssueCreateModalProps) {
       closeCreateIssue();
       setTitle("");
       setDescription("");
+      setType(IssueType.TASK);
+      setComponentId(null);
       if (data?.issue?.id) {
         setActiveIssueId(data.issue.id);
       }
@@ -160,6 +192,29 @@ export function IssueCreateModal({ project }: IssueCreateModalProps) {
 
         {/* Property Pickers Bar */}
         <div className="flex flex-wrap items-center gap-2 pt-4 text-xs">
+          {/* Issue Type Picker */}
+          <DropdownMenu>
+            <DropdownMenuTrigger className="flex items-center gap-1.5 rounded-md border border-[#e5e7eb] bg-white px-2.5 py-1.5 hover:bg-[#f8f9fa] transition-colors cursor-pointer outline-none shadow-xs">
+              <IssueTypeIcon type={type} size={14} />
+              <span className="text-[#374151] font-medium capitalize">{type.toLowerCase()}</span>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              {Object.values(IssueType).map((t) => (
+                <DropdownMenuItem
+                  key={t}
+                  onClick={() => setType(t)}
+                  className="flex items-center gap-2"
+                >
+                  <IssueTypeIcon type={t} size={14} />
+                  <span className="capitalize">{t.toLowerCase()}</span>
+                  {type === t && (
+                    <Check className="ml-auto h-3.5 w-3.5 text-[#3e63dd]" />
+                  )}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {/* State Picker */}
           <DropdownMenu>
             <DropdownMenuTrigger className="flex items-center gap-1.5 rounded-md border border-[#e5e7eb] bg-white px-2.5 py-1.5 hover:bg-[#f8f9fa] transition-colors cursor-pointer outline-none shadow-xs">
@@ -245,6 +300,52 @@ export function IssueCreateModal({ project }: IssueCreateModalProps) {
               })}
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Assign to me Button */}
+          {userData?.user && (
+            <button
+              type="button"
+              onClick={() => {
+                const myId = userData.user!.id;
+                setAssigneeIds((prev) =>
+                  prev.includes(myId)
+                    ? prev.filter((id) => id !== myId)
+                    : [...prev, myId]
+                );
+              }}
+              className={cn(
+                "flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium border transition-colors cursor-pointer shadow-xs",
+                userData.user?.id && assigneeIds.includes(userData.user.id)
+                  ? "border-[#3e63dd] bg-[#eff6ff] text-[#3e63dd]"
+                  : "border-[#e5e7eb] bg-white text-[#6b7280] hover:text-[#111827] hover:bg-[#f8f9fa]"
+              )}
+              title="Assign to me"
+            >
+              <UserCheck className="h-3.5 w-3.5" />
+              <span>Assign to me</span>
+            </button>
+          )}
+
+          {/* Component Picker */}
+          {components.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger className="flex items-center gap-1.5 rounded-md border border-[#e5e7eb] bg-white px-2.5 py-1.5 hover:bg-[#f8f9fa] transition-colors cursor-pointer text-[#374151] outline-none shadow-xs">
+                <Box className="h-3.5 w-3.5 text-[#6b7280]" />
+                <span className="truncate max-w-[120px]">
+                  {components.find((c) => c.id === componentId)?.name || "Component"}
+                </span>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => setComponentId(null)}>No Component</DropdownMenuItem>
+                {components.map((c) => (
+                  <DropdownMenuItem key={c.id} onClick={() => setComponentId(c.id)}>
+                    <Box className="h-3.5 w-3.5 text-[#3e63dd] mr-1.5" />
+                    <span>{c.name}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
 
           {/* Estimate Points */}
           <DropdownMenu>

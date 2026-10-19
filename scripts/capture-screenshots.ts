@@ -134,8 +134,20 @@ async function main() {
   }
   await saveScreenshot("09-smtp-settings.png");
 
+  // 10. Project Summary View (KPIs, Status Donut, Activity Feed)
+  console.log("Capturing 10-project-summary.png...");
+  await page.goto("http://localhost:3000/acme-corp/SPC/summary", { waitUntil: "networkidle" });
+  await page.waitForTimeout(2000);
+  await saveScreenshot("10-project-summary.png");
+
+  // 11. Backlog & Sprint Planning
+  console.log("Capturing 11-backlog-sprint-planning.png...");
+  await page.goto("http://localhost:3000/acme-corp/SPC/backlog", { waitUntil: "networkidle" });
+  await page.waitForTimeout(2000);
+  await saveScreenshot("11-backlog-sprint-planning.png");
+
   await browser.close();
-  console.log("All 9 screenshots captured successfully!");
+  console.log("All 11 screenshots captured successfully!");
 }
 
 main().catch((err) => {

@@ -3,13 +3,15 @@
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSpaceStore } from "@/lib/store";
-import { IssueWithDetails, ProjectWithDetails } from "@/lib/types";
-import { IssuePriority, RelationType } from "@prisma/client";
+import { IssueWithDetails, ProjectWithDetails, Component } from "@/lib/types";
+import { IssuePriority, IssueType, RelationType } from "@prisma/client";
 import { formatDate, cn } from "@/lib/utils";
 import { TipTapEditor } from "@/components/editor/TipTapEditor";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PriorityIcon } from "@/components/ui/PriorityIcon";
 import { StateIcon } from "@/components/ui/StateIcon";
+import { IssueTypeIcon } from "@/components/issues/IssueTypeIcon";
+import { WorklogModal } from "@/components/issues/WorklogModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/DatePicker";
@@ -30,6 +32,13 @@ import {
   Check,
   Link2,
   Trash2,
+  Eye,
+  EyeOff,
+  Copy,
+  Clock,
+  Box,
+  UserCheck,
+  Timer,
 } from "lucide-react";
 
 export function IssueDetailModal() {
@@ -40,7 +49,10 @@ export function IssueDetailModal() {
   const [newComment, setNewComment] = useState("");
   const [newSubIssueTitle, setNewSubIssueTitle] = useState("");
   const [isAddingSubIssue, setIsAddingSubIssue] = useState(false);
-  const [activeTab, setActiveTab] = useState<"comments" | "activity">("comments");
+  const [isWorklogModalOpen, setIsWorklogModalOpen] = useState(false);
+  const [isEditingEstimate, setIsEditingEstimate] = useState(false);
+  const [estimateInput, setEstimateInput] = useState("");
+  const [activeTab, setActiveTab] = useState<"comments" | "activity" | "worklogs">("comments");
 
   // Keyboard shortcut to close on Escape
   useEffect(() => {
@@ -134,6 +146,96 @@ export function IssueDetailModal() {
     },
   });
 
+  // Fetch current user
+  const { data: userData } = useQuery<{ user?: { id: string; name: string } }>({
+    queryKey: ["currentUser"],
+    queryFn: async () => {
+      const res = await fetch("/api/auth/me");
+      if (!res.ok) return { user: undefined };
+      return res.json();
+    },
+    staleTime: 60000,
+  });
+  const currentUserId = userData?.user?.id;
+
+  // Fetch components for project
+  const { data: componentsData } = useQuery<{ components: Component[] }>({
+    queryKey: ["components", issue?.projectId],
+    queryFn: async () => {
+      if (!issue?.projectId) return { components: [] };
+      const res = await fetch(`/api/projects/${issue.projectId}/components`);
+      if (!res.ok) return { components: [] };
+      return res.json();
+    },
+    enabled: !!issue?.projectId,
+    staleTime: 30000,
+  });
+  const components = componentsData?.components || issue?.project?.components || [];
+
+  // Check if current user is watching
+  const isWatching = Boolean(issue?.watchers?.some((w) => w.user.id === currentUserId));
+
+  // Toggle watch mutation
+  const toggleWatchMutation = useMutation({
+    mutationFn: async () => {
+      if (!activeIssueId) return;
+      const res = await fetch(`/api/issues/${activeIssueId}/watchers`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Failed to toggle watcher");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["issue", activeIssueId] });
+    },
+  });
+
+  // Clone issue mutation
+  const cloneIssueMutation = useMutation({
+    mutationFn: async () => {
+      if (!activeIssueId) return;
+      const res = await fetch(`/api/issues/${activeIssueId}/clone`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Failed to clone issue");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["issues"] });
+      if (data?.issue?.id) {
+        setActiveIssueId(data.issue.id);
+      }
+    },
+  });
+
+  const formatTimeMinutes = (mins?: number | null) => {
+    if (!mins || mins <= 0) return "0m";
+    const days = Math.floor(mins / 480);
+    const remAfterDays = mins % 480;
+    const hours = Math.floor(remAfterDays / 60);
+    const m = remAfterDays % 60;
+    const parts = [];
+    if (days > 0) parts.push(`${days}d`);
+    if (hours > 0) parts.push(`${hours}h`);
+    if (m > 0 || parts.length === 0) parts.push(`${m}m`);
+    return parts.join(" ");
+  };
+
+  const parseTimeToMinutes = (text: string) => {
+    let total = 0;
+    const dayMatch = text.match(/(\d+)\s*d/i);
+    const hourMatch = text.match(/(\d+)\s*h/i);
+    const minMatch = text.match(/(\d+)\s*m/i);
+    if (dayMatch) total += parseInt(dayMatch[1], 10) * 8 * 60;
+    if (hourMatch) total += parseInt(hourMatch[1], 10) * 60;
+    if (minMatch) total += parseInt(minMatch[1], 10);
+    if (!dayMatch && !hourMatch && !minMatch && text.trim()) {
+      const num = parseFloat(text.trim());
+      if (!isNaN(num)) total += Math.round(num * 60);
+    }
+    return total;
+  };
+
   // State & queries for issue relations
   const [isAddingRelation, setIsAddingRelation] = useState(false);
   const [relationType, setRelationType] = useState<RelationType>(RelationType.RELATED);
@@ -201,13 +303,38 @@ export function IssueDetailModal() {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Top Header */}
-        <div className="flex items-center justify-between border-b border-[#e5e7eb] px-5 py-3 bg-[#f8f9fa]">
-          <div className="flex items-center gap-3 text-xs">
+        <div className="flex items-center justify-between border-b border-[#e5e7eb] px-5 py-2.5 bg-[#f8f9fa]">
+          <div className="flex items-center gap-2.5 text-xs">
+            {issue && (
+              <DropdownMenu>
+                <DropdownMenuTrigger className="flex items-center gap-1.5 rounded-md px-2 py-1 hover:bg-[#eef0f2] transition-colors border border-[#e5e7eb] bg-white text-xs font-medium cursor-pointer shadow-xs outline-none">
+                  <IssueTypeIcon type={issue.type} size={14} />
+                  <span className="capitalize text-[#111827]">{issue.type.toLowerCase()}</span>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="bg-white border-[#e5e7eb] text-[#111827] shadow-xl">
+                  {Object.values(IssueType).map((t) => (
+                    <DropdownMenuItem
+                      key={t}
+                      onClick={() => updateIssueMutation.mutate({ type: t })}
+                      className="flex items-center gap-2 cursor-pointer text-xs"
+                    >
+                      <IssueTypeIcon type={t} size={14} />
+                      <span className="capitalize">{t.toLowerCase()}</span>
+                      {issue.type === t && (
+                        <Check className="ml-auto h-3.5 w-3.5 text-[#3e63dd]" />
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
             {issue?.project && (
               <span className="font-mono font-medium text-[#6b7280]">
                 {issue.project.identifier}-{issue.sequenceId}
               </span>
             )}
+
             {issue?.parent && (
               <span className="flex items-center gap-1 text-xs text-[#6b7280]">
                 sub-issue of{" "}
@@ -221,14 +348,45 @@ export function IssueDetailModal() {
             )}
           </div>
 
-          <button
-            onClick={() => setActiveIssueId(null)}
-            aria-label="Close modal"
-            data-testid="close-issue-modal"
-            className="rounded p-1 text-[#6b7280] hover:bg-[#f3f4f6] hover:text-[#111827] transition-colors cursor-pointer"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Watch / Unwatch button */}
+            <button
+              onClick={() => toggleWatchMutation.mutate()}
+              className={cn(
+                "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium border transition-colors cursor-pointer shadow-xs",
+                isWatching
+                  ? "bg-[#eff6ff] text-[#3e63dd] border-[#bfdbfe]"
+                  : "bg-white text-[#4b5563] border-[#e5e7eb] hover:bg-[#f3f4f6] hover:text-[#111827]"
+              )}
+              title={isWatching ? "You are watching this issue. Click to unwatch." : "Watch this issue to receive email and notification alerts"}
+            >
+              {isWatching ? <Eye className="h-3.5 w-3.5 text-[#3e63dd]" /> : <EyeOff className="h-3.5 w-3.5 text-[#6b7280]" />}
+              <span>{isWatching ? "Watching" : "Watch"}</span>
+              <span className="rounded-full bg-black/5 px-1.5 py-0.2 text-[10px] font-mono">
+                {issue?.watchers?.length || 0}
+              </span>
+            </button>
+
+            {/* Clone Issue button */}
+            <button
+              onClick={() => cloneIssueMutation.mutate()}
+              disabled={cloneIssueMutation.isPending}
+              className="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium border border-[#e5e7eb] bg-white text-[#4b5563] hover:bg-[#f3f4f6] hover:text-[#111827] transition-colors cursor-pointer shadow-xs"
+              title="Duplicate this issue"
+            >
+              <Copy className="h-3.5 w-3.5 text-[#6b7280]" />
+              <span>{cloneIssueMutation.isPending ? "Cloning..." : "Clone"}</span>
+            </button>
+
+            <button
+              onClick={() => setActiveIssueId(null)}
+              aria-label="Close modal"
+              data-testid="close-issue-modal"
+              className="rounded p-1 text-[#6b7280] hover:bg-[#f3f4f6] hover:text-[#111827] transition-colors cursor-pointer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         {isLoading || !issue ? (
@@ -548,7 +706,7 @@ export function IssueDetailModal() {
               </div>
 
 
-              {/* Activity & Comments Tabs */}
+              {/* Activity, Comments, and Worklogs Tabs */}
               <div className="space-y-3 pt-2">
                 <div className="flex items-center gap-4 border-b border-[#e5e7eb] pb-2 text-xs font-semibold">
                   <button
@@ -575,9 +733,87 @@ export function IssueDetailModal() {
                     <Activity className="h-3.5 w-3.5" />
                     <span>Activity Audit Trail</span>
                   </button>
+                  <button
+                    onClick={() => setActiveTab("worklogs")}
+                    className={cn(
+                      "flex items-center gap-1.5 pb-1 transition-colors cursor-pointer",
+                      activeTab === "worklogs"
+                        ? "border-b-2 border-[#3e63dd] text-[#3e63dd]"
+                        : "text-[#6b7280] hover:text-[#111827]"
+                    )}
+                  >
+                    <Clock className="h-3.5 w-3.5" />
+                    <span>Worklogs ({issue.worklogs?.length || 0})</span>
+                  </button>
                 </div>
 
-                {activeTab === "comments" ? (
+                {activeTab === "worklogs" ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between pb-1">
+                      <div className="flex items-center gap-2 text-xs text-[#4b5563]">
+                        <Clock className="h-4 w-4 text-[#3e63dd]" />
+                        <span className="font-semibold text-[#111827]">Logged Time:</span>
+                        <span className="font-mono font-bold text-[#3e63dd]">
+                          {formatTimeMinutes(issue.timeSpent)}
+                        </span>
+                        {Boolean(issue.timeEstimate) && (
+                          <span className="text-[#6b7280]">
+                            of {formatTimeMinutes(issue.timeEstimate)} estimated
+                          </span>
+                        )}
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => setIsWorklogModalOpen(true)}
+                        className="h-7 text-xs bg-[#3e63dd] hover:bg-[#3451b2] text-white flex items-center gap-1"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        <span>Log Work</span>
+                      </Button>
+                    </div>
+
+                    {(!issue.worklogs || issue.worklogs.length === 0) ? (
+                      <div className="rounded-lg border border-dashed border-[#e5e7eb] p-6 text-center text-xs text-[#6b7280]">
+                        No work logged yet. Click &quot;Log Work&quot; to record time spent on this issue.
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {issue.worklogs.map((wl) => (
+                          <div
+                            key={wl.id}
+                            className="flex items-start justify-between rounded-lg border border-[#e5e7eb] bg-white p-3 shadow-xs text-xs"
+                          >
+                            <div className="flex items-start gap-3">
+                              <Avatar className="h-6 w-6 mt-0.5">
+                                {wl.user.avatarUrl && <AvatarImage src={wl.user.avatarUrl} />}
+                                <AvatarFallback className="text-[10px] bg-[#f3f4f6] text-[#374151]">
+                                  {wl.user.name.substring(0, 1)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold text-[#111827]">{wl.user.name}</span>
+                                  <span className="text-[#6b7280] text-[11px]">logged</span>
+                                  <span className="rounded bg-[#eff6ff] px-1.5 py-0.2 font-mono font-semibold text-[#3e63dd] border border-[#dbeafe]">
+                                    {formatTimeMinutes(wl.timeSpent)}
+                                  </span>
+                                </div>
+                                {wl.description && (
+                                  <p className="mt-1 text-xs text-[#4b5563] leading-relaxed">
+                                    {wl.description}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <span className="text-[10px] text-[#6b7280] shrink-0 font-mono">
+                              {formatDate(wl.loggedAt)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : activeTab === "comments" ? (
                   <div className="space-y-4">
                     {/* Comments list */}
                     {issue.comments?.map((comment) => (
@@ -720,9 +956,27 @@ export function IssueDetailModal() {
 
               {/* Assignees */}
               <div className="space-y-1.5">
-                <label className="font-semibold uppercase tracking-wider text-[#6b7280] text-[10px]">
-                  Assignees
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="font-semibold uppercase tracking-wider text-[#6b7280] text-[10px]">
+                    Assignees
+                  </label>
+                  {userData?.user && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const myId = userData.user!.id;
+                        const isAssigned = issue.assignees.some((a) => a.user.id === myId);
+                        const newIds = isAssigned
+                          ? issue.assignees.filter((a) => a.user.id !== myId).map((a) => a.user.id)
+                          : [...issue.assignees.map((a) => a.user.id), myId];
+                        updateIssueMutation.mutate({ assigneeIds: newIds });
+                      }}
+                      className="text-[10px] font-medium text-[#3e63dd] hover:underline cursor-pointer"
+                    >
+                      {issue.assignees.some((a) => a.user.id === userData.user?.id) ? "Unassign me" : "Assign to me"}
+                    </button>
+                  )}
+                </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger className="flex min-h-[32px] w-full items-center justify-between rounded-md border border-[#e5e7eb] bg-white px-2.5 py-1 text-[#111827] hover:bg-[#f3f4f6] shadow-xs transition-colors">
                     {issue.assignees && issue.assignees.length > 0 ? (
@@ -779,6 +1033,129 @@ export function IssueDetailModal() {
                     })}
                   </DropdownMenuContent>
                 </DropdownMenu>
+              </div>
+
+              {/* Component */}
+              <div className="space-y-1.5">
+                <label className="font-semibold uppercase tracking-wider text-[#6b7280] text-[10px]">
+                  Component
+                </label>
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="flex h-8 w-full items-center justify-between rounded-md border border-[#e5e7eb] bg-white px-2.5 text-[#111827] hover:bg-[#f3f4f6] shadow-xs transition-colors">
+                    <div className="flex items-center gap-2 truncate">
+                      <Box className="h-3.5 w-3.5 text-[#3e63dd] shrink-0" />
+                      <span className="truncate font-medium">
+                        {issue.component ? issue.component.name : "No Component"}
+                      </span>
+                    </div>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-64">
+                    <DropdownMenuItem
+                      onClick={() => updateIssueMutation.mutate({ componentId: null })}
+                    >
+                      No Component
+                    </DropdownMenuItem>
+                    {components.map((c) => (
+                      <DropdownMenuItem
+                        key={c.id}
+                        onClick={() => updateIssueMutation.mutate({ componentId: c.id })}
+                        className="flex items-center gap-2"
+                      >
+                        <Box className="h-3.5 w-3.5 text-[#3e63dd]" />
+                        <span>{c.name}</span>
+                        {issue.componentId === c.id && (
+                          <Check className="ml-auto h-3.5 w-3.5 text-[#3e63dd]" />
+                        )}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              {/* Time Tracking Card */}
+              <div className="space-y-2 rounded-lg border border-[#e5e7eb] bg-white p-3 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 font-semibold text-[#111827] text-xs">
+                    <Clock className="h-3.5 w-3.5 text-[#3e63dd]" />
+                    <span>Time Tracking</span>
+                  </div>
+                  <button
+                    onClick={() => setIsWorklogModalOpen(true)}
+                    className="text-[11px] font-semibold text-[#3e63dd] hover:underline cursor-pointer"
+                  >
+                    + Log Work
+                  </button>
+                </div>
+
+                {Boolean(issue.timeEstimate) && (
+                  <div className="space-y-1">
+                    <div className="h-1.5 w-full rounded-full bg-[#f3f4f6] overflow-hidden">
+                      <div
+                        className={cn(
+                          "h-full transition-all",
+                          (issue.timeSpent || 0) > (issue.timeEstimate || 0)
+                            ? "bg-rose-500"
+                            : "bg-emerald-500"
+                        )}
+                        style={{
+                          width: `${Math.min(100, Math.round(((issue.timeSpent || 0) / (issue.timeEstimate || 1)) * 100))}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-2 pt-1 text-[11px]">
+                  <div className="space-y-0.5">
+                    <span className="text-[#6b7280]">Original Estimate</span>
+                    {isEditingEstimate ? (
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="text"
+                          placeholder="e.g. 2d 4h"
+                          value={estimateInput}
+                          onChange={(e) => setEstimateInput(e.target.value)}
+                          onBlur={() => {
+                            if (estimateInput.trim()) {
+                              const mins = parseTimeToMinutes(estimateInput);
+                              updateIssueMutation.mutate({ timeEstimate: mins });
+                            }
+                            setIsEditingEstimate(false);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              if (estimateInput.trim()) {
+                                const mins = parseTimeToMinutes(estimateInput);
+                                updateIssueMutation.mutate({ timeEstimate: mins });
+                              }
+                              setIsEditingEstimate(false);
+                            }
+                          }}
+                          autoFocus
+                          className="h-6 w-full rounded border border-[#3e63dd] px-1.5 font-mono text-xs text-[#111827] focus:outline-none"
+                        />
+                      </div>
+                    ) : (
+                      <div
+                        onClick={() => {
+                          setEstimateInput(issue.timeEstimate ? formatTimeMinutes(issue.timeEstimate) : "");
+                          setIsEditingEstimate(true);
+                        }}
+                        className="font-mono font-medium text-[#111827] hover:text-[#3e63dd] cursor-pointer"
+                        title="Click to edit estimate"
+                      >
+                        {issue.timeEstimate ? formatTimeMinutes(issue.timeEstimate) : "Set estimate"}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-0.5">
+                    <span className="text-[#6b7280]">Logged Spent</span>
+                    <div className="font-mono font-bold text-[#3e63dd]">
+                      {formatTimeMinutes(issue.timeSpent)}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Estimate Points (Fibonacci) */}
@@ -907,6 +1284,19 @@ export function IssueDetailModal() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Worklog Modal */}
+        {issue && (
+          <WorklogModal
+            issue={issue}
+            isOpen={isWorklogModalOpen}
+            onClose={() => {
+              setIsWorklogModalOpen(false);
+              queryClient.invalidateQueries({ queryKey: ["issue", activeIssueId] });
+              queryClient.invalidateQueries({ queryKey: ["issues"] });
+            }}
+          />
         )}
       </div>
     </div>
