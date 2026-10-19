@@ -72,7 +72,7 @@ export function GlobalTopNav({
         {/* 9-Dots App Switcher Button */}
         <DropdownMenu open={appsOpen} onOpenChange={setAppsOpen}>
           <DropdownMenuTrigger className="flex h-8 w-8 items-center justify-center rounded-md text-[#4b5563] hover:bg-[#f3f4f6] hover:text-[#111827] transition-colors cursor-pointer outline-none">
-            {/* 3x3 Dots SVG icon matching Jira */}
+            {/* 3x3 Dots SVG icon for Space App Switcher */}
             <svg
               className="h-4.5 w-4.5"
               viewBox="0 0 24 24"

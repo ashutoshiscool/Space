@@ -49,7 +49,7 @@ export default async function WorkspaceLayout({
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-white text-[#111827]">
-      {/* Top Global Navigation Bar matching Jira */}
+      {/* Top Global Navigation Bar for Space Workspace */}
       <GlobalTopNav
         workspace={workspace as unknown as WorkspaceWithDetails}
         currentProject={currentProject}
